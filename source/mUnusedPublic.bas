@@ -451,7 +451,7 @@ Public Sub PublicUnused()
     sWbk = WbkSelect
     If sWbk = vbNullString Then GoTo xt
     GetOpen sWbk, wbkServiced
-    If wbkService Is Nothing Then GoTo xt
+    If wbkServiced Is Nothing Then GoTo xt
     fExcludeInclude.Show ' assembles in Excluded the ignored VBComponents
         
     PublicItemsUsageCollect

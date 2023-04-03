@@ -8,12 +8,12 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 Option Explicit
-Private Const HOSTED_RAWS = "mUnusedPublic"
+Private Const HOSTED_RAWS = vbNullString
 
 Private Sub Workbook_Open()
     
     mCompManClient.CompManService mCompManClient.SRVC_UPDATE_OUTDATED, HOSTED_RAWS
-    mUnusedPublic.PublicUnused
+    mUnused.Unused
 
 End Sub
 

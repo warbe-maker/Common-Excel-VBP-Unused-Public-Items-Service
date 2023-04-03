@@ -34,7 +34,7 @@ Private Sub cmbListUnusedUsed_Click()
             End If
         Next i
     End With
-    Unload Me
+    Me.Hide
     
 End Sub
 
@@ -44,7 +44,7 @@ Private Sub UserForm_Initialize()
     Dim v   As Variant
     
     For Each vbc In wbkServiced.VBProject.VBComponents
-        mUnusedPublic.AddAscByKey dct, vbc.name, vbNullString
+        mPublic.AddAscByKey dct, vbc.name, vbNullString
     Next vbc
     
     For Each v In dct
@@ -54,4 +54,8 @@ Private Sub UserForm_Initialize()
     Next v
     Set dct = Nothing
     
+End Sub
+
+Private Sub UserForm_Terminate()
+    mPublic.Terminated = True
 End Sub

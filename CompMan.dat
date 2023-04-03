@@ -25,7 +25,3 @@ RawRevisionNumber=2023-01-24.002
 [clsStk]
 KindOfComponent=used
 RawRevisionNumber=2023-02-17.001
-[mUnusedPublic]
-KindOfComponent=hosted
-RawExpFileFullName=D:\Ablage\Excel VBA\DevAndTest\Common-Excel-VBP-Analysis\source\mUnusedPublic.bas
-RawRevisionNumber=2023-03-30.005

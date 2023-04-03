@@ -90,26 +90,6 @@ Private Enum enTraceInfo
     enPosItmArgs
 End Enum
 
-Private Declare PtrSafe Function apiShellExecute Lib "shell32.dll" _
-    Alias "ShellExecuteA" _
-    (ByVal hWnd As Long, _
-    ByVal lpOperation As String, _
-    ByVal lpFile As String, _
-    ByVal lpParameters As String, _
-    ByVal lpDirectory As String, _
-    ByVal nShowCmd As Long) _
-    As Long
-'***App Window Constants***
-Private Const WIN_NORMAL = 1         'Open Normal
-
-'***Error Codes***
-Private Const ERROR_SUCCESS = 32&
-Private Const ERROR_NO_ASSOC = 31&
-Private Const ERROR_OUT_OF_MEM = 0&
-Private Const ERROR_FILE_NOT_FOUND = 2&
-Private Const ERROR_PATH_NOT_FOUND = 3&
-Private Const ERROR_BAD_FORMAT = 11&
-
 Private Declare PtrSafe Function getFrequency Lib "kernel32" _
 Alias "QueryPerformanceFrequency" (cySysFrequency As Currency) As Long
 Private Declare PtrSafe Function getTickCount Lib "kernel32" _
@@ -689,7 +669,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.Source
+    If err_source = vbNullString Then err_source = Err.source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     

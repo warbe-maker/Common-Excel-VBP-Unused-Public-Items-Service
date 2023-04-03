@@ -8,5 +8,17 @@
  4. Start the analysis
  
  Since the analysis may take a couple of seconds, the progress is displayed in the Application.StatusBar
- 
+
+## The service considers, recognizes, copes with:
+- Code lines continued
+- Code lines with multiple sub-lines (separated by ': ')
+- Project public, VBComponent global and Procedure local Class Instances
+- Public items:
+  - Constants
+  - Variables
+  - Sub-Procedures
+  - Functions
+  - Properties
+  - Methods (Function, Sub in Class-Modules)
+
  [1]:https://gitcdn.link/cdn/warbe-maker/Common-Excel-VBP-Unused-Public-Items-Service/master/VBPunusedPublic.xlsb

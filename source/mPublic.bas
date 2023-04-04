@@ -1,21 +1,18 @@
 Attribute VB_Name = "mPublic"
 Option Explicit
 ' ----------------------------------------------------------------------------
-' Standard Module mUnusedPublic
-' -----------------------------
-' The 'Unused' service analyses the code of a Workbook for any unused
-' public items by considering:
-' - Public Constants
-' - Public Sub, Function, Property
-' - Methods and Properties of Class-Modules used through Class-Instances
-' - Nested With xxx .... End With for a default Class-Instance object
-' - Nested class instance calls x.y.z
-' - Public prodedures used via an OnAction property
-' - Public procedures called via Application.Run (provided the called
-'   procedure is not 'hidden' in a Constant.
-'
-' The service supplements MZ-Tools' dead code analyses which excludes Public
-' items.
+' Standard Module mPublic
+' =======================
+' Public services:
+' - AddAscByKey Adds items to a Dictionary instantly oredered by key.
+' - Collect     Collects (in Dictionary with comp-name.item-name as key):
+'               1. All those VBComponen not explicitely excluded
+'               1.1 All Class Modules
+'               2. All items declared Public
+'               3. All public item's Kind
+'               4. All public items indicating unique True or False
+'               5. All VBComponent's Procedures with their start and end line
+' -
 '
 ' W. Rauschenberger
 ' ----------------------------------------------------------------------------
@@ -346,12 +343,13 @@ Public Sub Collect()
     
     BoP ErrSrc(PROC)
     CompsCollect Excluded
-    mProc.Collect           ' Collect all procedures in not exluded VBComponenKoItemts
-    mClass.CollectInstncsVBPGlobal   ' Collect all class instance which are VB-Project global
-    mClass.CollectInstncsCompGlobal  ' Collect all class instances which are ComponenKoItemt global
-    mClass.CollectInstncsProcLocal   ' Collect all class instances in Procedures
+    mProc.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
+    mClass.CollectInstncsVBPGlobal  ' Collect all class instance which are VB-Project global
+    mClass.CollectInstncsCompGlobal ' Collect all class instances which are ComponenKoItemt global
+    mClass.CollectInstncsProcLocal  ' Collect all class instances in Procedures
     CollectOnActions
     
+    '~~ Collect Public declares Sub, Function, Property
     For Each vComp In dctComps
         sComp = vComp
         Set cllComp = dctComps(sComp)
@@ -433,7 +431,7 @@ Public Function CompCollKind(ByVal cll As Collection) As enKindOfComponent:    C
 
 Public Function CompCollVBC(ByVal cll As Collection) As VBComponent:   Set CompCollVBC = cll(1):   End Function
 
-Public Sub CompsCollect(ByVal c_excluded As String)
+Private Sub CompsCollect(ByVal c_excluded As String)
 ' ------------------------------------------------------------------------------------
 ' Provides a Dictionary (dctComps) with all components not excluded
 ' XrefVBProject with the VBComponent's Name as the key and the VBComponent as item.
@@ -473,7 +471,7 @@ Public Sub CompsCollect(ByVal c_excluded As String)
                     Set cll = Nothing
                 End If
                 If .Type = vbext_ct_ClassModule Then
-                    mClass.IsModule(sComp, vbc) = True
+                    mClass.IsClassModule(sComp, vbc) = True
                 End If
             End If
         End With
@@ -600,7 +598,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     
@@ -740,7 +738,7 @@ eh: Select Case ErrMsg(ErrSrc(PROC))
 End Sub
 
 Public Sub DeclaredAs(ByVal c_line As String, _
-                  ByRef c_as As String)
+                      ByRef c_as As String)
 ' ------------------------------------------------------------------------------------
 ' Returns from the code line (c_line) the Public " As " (c_as).
 ' ------------------------------------------------------------------------------------
@@ -1077,7 +1075,8 @@ Public Sub Variable(ByVal c_public As String, _
                     ByRef c_item As String, _
                     ByRef c_as As String)
 ' ------------------------------------------------------------------------------------
-' Returns the name of the Public (c_public) as the public item (c_item).
+' Returns the name of the code line (c_line) the public declared item (c_item) and its
+' As declaration (c_as).
 ' ------------------------------------------------------------------------------------
     Const PROC = "Variable"
                        
@@ -1112,7 +1111,7 @@ Private Sub PushInstanceOnWithStack(ByVal r_comp_name As String, _
     
     If r_line Like "With New *" Then
         sInstance = Trim(Split(r_line, "With New ")(1))
-        If mClass.IsModule(sInstance) Then
+        If mClass.IsClassModule(sInstance) Then
             sClass = sInstance
         ElseIf mClass.IsInstance(r_comp_name, sInstance, sClass, r_proc_name) Then
             GoTo xt
@@ -1137,5 +1136,4 @@ eh: Select Case ErrMsg(ErrSrc(PROC))
         Case Else:      GoTo xt
     End Select
 End Sub
-
 

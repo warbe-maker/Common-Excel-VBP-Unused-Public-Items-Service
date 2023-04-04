@@ -11,10 +11,7 @@ Option Explicit
 Private Const HOSTED_RAWS = vbNullString
 
 Private Sub Workbook_Open()
-    
     mCompManClient.CompManService mCompManClient.SRVC_UPDATE_OUTDATED, HOSTED_RAWS
-    mUnused.Unused
-
 End Sub
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)

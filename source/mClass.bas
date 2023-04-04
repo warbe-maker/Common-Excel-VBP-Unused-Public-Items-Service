@@ -46,7 +46,7 @@ Public Sub CollectInstncsCompGlobal()
             While mLine.DeclaresInstanceGlobal(sLine, sItem, sAs)
                 lStopLoop = lStopLoop + 1
                 If lStopLoop > 50 Then Stop
-                If mClass.IsModule(sAs) Then
+                If mClass.IsClassModule(sAs) Then
                     If Not dctInstncsCompGlobal.Exists(sItem) Then
                         dct.Add sItem, sAs
                     End If
@@ -101,20 +101,21 @@ Public Sub CollectInstncsVBPGlobal()
     AddAscByKey dctInstncsVBPrjctGlobal, vbNullString, dct
     Set dct = Nothing
     
-    '~~ Collect VBP-global Class instance in VBComponents (those declared Public)
+    '~~ Collect any Public declared variables, constants, and class instances
     For Each v In dctComps
         Set dct = New Dictionary
         sComp = v
         Set cll = dctComps(v)
         Set vbc = CompCollVBC(cll)
+'        If vbc.name = "mCompManClient" Then Stop
         enKoComp = CompCollKind(cll)
         Set vbcm = vbc.CodeModule
         i = 0
-        mLine.NextLine vbcm, i, lNextSubLine
+        sLine = mLine.NextLine(vbcm, i, lNextSubLine)
         While i <= vbcm.CountOfDeclarationLines And sLine <> vbNullString
             If sLine Like "Public *" Then
                 If DeclaresPublicItem(i, sLine, sItem, sAs, vbcm, enKoComp, enKoItem) Then
-                    If mClass.IsModule(sAs, vbc) Then
+                    If mClass.IsClassModule(sAs, vbc) Then
                         AddAscByKey dct, sItem, sAs
                     Else
                         ItemCollect sComp, sItem, i, sLine, enKoComp, enKoItem
@@ -250,7 +251,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     
@@ -392,13 +393,13 @@ Public Sub CollectInstncsProcLocal()
                     Case sLine Like "* As New *"
                         sItem = Split(Trim(Split(sLine, " As New ")(0)), " ")(UBound(Split(Trim(Split(sLine, " As ")(0)), " ")))
                         sAs = Split(Trim(Split(sLine, " As New ")(1)), " ")(0)
-                        If mClass.IsModule(sAs) Then
+                        If mClass.IsClassModule(sAs) Then
                             dctInstProc.Add sItem, sAs
                         End If
                     Case sLine Like "* As *"
                         sItem = Split(Trim(Split(sLine, " As ")(0)), " ")(UBound(Split(Trim(Split(sLine, " As ")(0)), " ")))
                         sAs = Split(Trim(Split(sLine, " As ")(1)), " ")(0)
-                        If mClass.IsModule(sAs) Then
+                        If mClass.IsClassModule(sAs) Then
                             If Not dctInstProc.Exists(sItem) Then
                                 dctInstProc.Add sItem, sAs
                             End If
@@ -508,15 +509,15 @@ eh: Select Case ErrMsg(ErrSrc(PROC))
     End Select
 End Function
 
-Public Property Get IsModule(Optional ByVal i_name As String, _
+Public Property Get IsClassModule(Optional ByVal i_name As String, _
                              Optional ByVal i_vbc As VBComponent) As Boolean
     Set i_vbc = i_vbc
     If Not dctClassModules Is Nothing Then
-        IsModule = dctClassModules.Exists(i_name)
+        IsClassModule = dctClassModules.Exists(i_name)
     End If
 End Property
 
-Public Property Let IsModule(Optional ByVal i_name As String, _
+Public Property Let IsClassModule(Optional ByVal i_name As String, _
                              Optional ByVal i_vbc As VBComponent, _
                                       ByVal i_is As Boolean)
                                             

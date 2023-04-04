@@ -1,12 +1,28 @@
 Attribute VB_Name = "mUnused"
 Option Explicit
 ' ----------------------------------------------------------------------------
+' Standard Module mUnused
+' =======================
+' Public services:
+' - Unused  - Displays a Workbook(file) selection dialog when no serviced
+'             Workbook argument is provided(u_wbk) is provided
+'           - Displays a VBComponent selection dialog when no excluded
+'             VBComponents argument is provided (a vbNullString declared none
+'             excluded)
+'           - Allows the specification of excluded Code-Lines
+'           - Collects all Public items in the selected VBComponents and
+'             displays those unused and used (the used ones only with the
+'             compoent.procedure found and the code line)
 '
+' W. Rauschenberger, Berlin Apr 2023
+'
+' See also: https://github.com/warbe-maker/Common-Excel-VBP-Unused-Public-Items-Service
 ' ----------------------------------------------------------------------------
 
-Public wbkServiced              As Workbook
-Public Excluded                 As String
-Public ExcludedCodeLines        As String
+Public wbkServiced          As Workbook
+Public Excluded             As String
+Public sExcludedCodeLines   As String
+Public vExcludedCodeLines   As Variant
 
 Public Declare PtrSafe Function apiShellExecute Lib "shell32.dll" _
     Alias "ShellExecuteA" _
@@ -108,6 +124,67 @@ Private Sub BoP(ByVal b_proc As String, ParamArray b_arguments() As Variant)
 #End If
 End Sub
 
+Private Sub DisplayResult()
+    Dim cll                 As Collection
+    Dim lMaxCompProcKind    As Long
+    Dim lMaxKindOfComp      As Long
+    Dim lMaxKindOfItem      As Long
+    Dim lMaxLenItems        As Long
+    Dim lMaxPublic          As Long
+    Dim lMaxUsing           As Long
+    Dim s                   As String
+    Dim sComp               As String
+    Dim sProc               As String
+    Dim vPublic             As Variant
+
+    lMaxKindOfComp = MaxKindOfComp
+    lMaxKindOfItem = MaxKindOfItem
+    lMaxLenItems = MaxLenItems(dctPublicItems)
+    
+    lMaxCompProcKind = lMaxKindOfComp + lMaxKindOfItem + 3
+    
+    s = "The following " & dctPublicItems.Count & " Public declared items are  u n u s e d ! *)" & vbCrLf:                                              WriteToFile s
+    s = Align("Kind of Component.Item", lMaxCompProcKind, AlignCentered) & " " & Align("Public item (component.item)", lMaxLenItems, AlignCentered):    WriteToFile s
+    s = String(lMaxCompProcKind, "-") & " " & String(lMaxLenItems, "-"):                                                                                WriteToFile s
+    
+    For Each vPublic In dctPublicItems
+        Set cll = dctPublicItems(vPublic)
+        sComp = Split(vPublic, ".")(0)
+        sProc = Split(vPublic, ".")(1)
+        s = "(" & PublicItemCollKindOfCompItem(cll) & ")"
+        WriteToFile Align(s, lMaxCompProcKind, , " ") & vPublic
+    Next vPublic
+    
+    lMaxLenItems = MaxLenItems(dctUsed)
+    WriteToFile vbNullString
+    WriteToFile "*) Public items are not analysed in their own component."
+    s = "   I.e. an unused Public item may still be used within its own Component.":                            WriteToFile s
+    WriteToFile "   In case the Public item should rather be turned into Private!"
+    WriteToFile String(Len(s), "=")
+    WriteToFile vbLf
+    s = "The following " & dctUsed.Count & " Public declared items had been found in at least one code line:":  WriteToFile s
+    WriteToFile String(Len(s), "-")
+    
+    For Each vPublic In dctUsed
+        Set cll = dctUsed(vPublic)
+        lMaxPublic = mPublic.Max(lMaxPublic, Len(vPublic))
+        lMaxUsing = mPublic.Max(lMaxUsing, Len(cll(5)))
+    Next vPublic
+    
+    WriteToFile Align("Public item", lMaxPublic, AlignLeft) & " " & Align("Used in (VBComponent.Procedure) by example", lMaxUsing + 2, AlignLeft) & "In code line"
+    WriteToFile String(lMaxPublic, "-") & " " & String(lMaxUsing + 2, "-") & " " & String(80, "-")
+    
+    For Each vPublic In dctUsed
+        Set cll = dctUsed(vPublic)
+        sComp = Split(vPublic, ".")(0)
+        sProc = Split(vPublic, ".")(1)
+        WriteToFile Align(vPublic, lMaxPublic + 1, AlignLeft, , ".") & Align(cll(5), lMaxUsing + 1, AlignLeft, , ".") & ": " & cll(7)
+    Next vPublic
+
+    OpenUrlEtc sFile, WIN_NORMAL
+
+End Sub
+
 Private Sub EoP(ByVal e_proc As String, _
       Optional ByVal e_inf As String = vbNullString)
 ' ------------------------------------------------------------------------------
@@ -207,7 +284,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     
@@ -356,105 +433,84 @@ Private Function OpenUrlEtc(ByVal oue_string As String, _
 
 End Function
 
-Public Sub Unused()
+Private Sub ProvisionOfExcludedCodelines(Optional ByVal p_excluded As String = vbNullString)
+    Dim sSplit As String
+    
+    If p_excluded <> vbNullString Then
+        If InStr(p_excluded, vbCrLf) <> 0 Then
+            sSplit = vbCrLf
+        ElseIf InStr(p_excluded, vbLf) <> 0 Then
+            sSplit = vbLf
+        Else
+            sSplit = vbCr
+        End If
+        vExcludedCodeLines = Split(p_excluded, sSplit)
+    End If
+
+End Sub
+
+Private Sub ProvisionOfExcludedComponents(Optional ByVal p_excluded As String = "n o n e  s p e c i f i e d")
+    
+    If p_excluded = "n o n e  s p e c i f i e d" Then
+        fExcludeInclude.Show ' assembles in Excluded the ignored VBComponents
+        If Terminated Then GoTo xt
+        Set fExcludeInclude = Nothing
+    Else
+        Excluded = p_excluded
+    End If
+
+xt: Exit Sub
+
+End Sub
+
+Private Sub ProvisionOfTheServicedWorkbook(ByVal p_wbk As Workbook)
+    Dim sWbk As String
+    
+    If p_wbk Is Nothing Then
+        sWbk = WbkSelect
+        If sWbk = vbNullString Then GoTo xt
+        GetOpen sWbk, wbkServiced
+    Else
+        Set wbkServiced = p_wbk
+    End If
+
+xt: Exit Sub
+
+End Sub
+
+Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
+                  Optional ByVal u_excluded_components As String = "n o n e  s p e c i f i e d", _
+                  Optional ByVal u_excluded_code_lines As String = vbNullString)
 ' ------------------------------------------------------------------------------
-' - Displays a file selection dialog to select a Workbook which is opened when
-'   not already open (when no Workbook is elected the procedure terminates),
-' - Displays a VBComponent on the selected Workbook's VB-Project for a decision
-'   which one to include or exclude,
-' - Collects all Public items in the selected VBComponents,
-' - Identifies all unused Public items by removing those found being used,
-' - Displays a list of all unused/used Public items as the result.
+' - When no serviced Workbook (u_wbk) is provided, a file selection dialog is
+'   displayed for the selection of a Workbook - which is opened when not already
+'   open. When no Workbook is elected the procedure terminates,
+' - When no excluded components are specified, i.e. not even indication by a
+'   vbNullString that noe are excluded, a VBComponent selection dialog is
+'   displayeded for a decision which ones to include or exclude,
+' - All Public items in the selected VBComponents are collected and those not
+'   used in any code line are displayed finally.
 '
-' This procedure is executed when this Workbook is opened. It may as well be
-' executed manually when it had been terminated in the firat place.
-'
-' W. Rauschenberger, Berlin Mar 2023
+' W. Rauschenberger, Berlin Apr 2023
 '
 ' See also: https://github.com/warbe-maker/Common-Excel-VBP-Unused-Public-Items-Service
 ' ------------------------------------------------------------------------------
     Const PROC  As String = "Unused"
     
     On Error GoTo eh
-    Dim cll                 As Collection
-    Dim lMaxCompProcKind    As Long
-    Dim lMaxKindOfComp      As Long
-    Dim lMaxKindOfItem      As Long
-    Dim lMaxLenItems        As Long
-    Dim lMaxPublic          As Long
-    Dim lMaxUsing           As Long
-    Dim s                   As String
-    Dim sComp               As String
-    Dim sProc               As String
-    Dim vPublic             As Variant
-    Dim sWbk                As String
-    
     BoP ErrSrc(PROC)
-    If wbkServiced Is Nothing Then
-        sWbk = WbkSelect
-        If sWbk = vbNullString Then GoTo xt
-        GetOpen sWbk, wbkServiced
-    End If
-    If wbkServiced Is Nothing Then GoTo xt
-    If Excluded = vbNullString Then
-        fExcludeInclude.Show ' assembles in Excluded the ignored VBComponents
-    End If
-    If Terminated Then GoTo xt
-    Set fExcludeInclude = Nothing
     
-    PublicItemsUsageCollect
+    ProvisionOfTheServicedWorkbook u_wbk:   If wbkServiced Is Nothing Then GoTo xt
     
-    lMaxKindOfComp = MaxKindOfComp
-    lMaxKindOfItem = MaxKindOfItem
-    lMaxLenItems = MaxLenItems(dctPublicItems)
+    ProvisionOfExcludedComponents u_excluded_components
     
-    lMaxCompProcKind = lMaxKindOfComp + lMaxKindOfItem + 3
+    ProvisionOfExcludedCodelines u_excluded_code_lines
     
-    s = "The following " & dctPublicItems.Count & " Public declared items are  u n u s e d ! *)" & vbCrLf:                                              WriteToFile s
-    s = Align("Kind of Component.Item", lMaxCompProcKind, AlignCentered) & " " & Align("Public item (component.item)", lMaxLenItems, AlignCentered):    WriteToFile s
-    s = String(lMaxCompProcKind, "-") & " " & String(lMaxLenItems, "-"):                                                                                WriteToFile s
+    mPublic.PublicItemsUsageCollect
     
-    For Each vPublic In dctPublicItems
-        Set cll = dctPublicItems(vPublic)
-        sComp = Split(vPublic, ".")(0)
-        sProc = Split(vPublic, ".")(1)
-        s = "(" & PublicItemCollKindOfCompItem(cll) & ")"
-        WriteToFile Align(s, lMaxCompProcKind, , " ") & vPublic
-    Next vPublic
-    
-    lMaxLenItems = MaxLenItems(dctUsed)
-    WriteToFile vbNullString
-    WriteToFile "*) Public items are not analysed in their own component."
-    s = "   I.e. an unused Public item may still be used within its own Component.":                            WriteToFile s
-    WriteToFile "   In case the Public item should rather be turned into Private!"
-    WriteToFile String(Len(s), "=")
-    WriteToFile vbLf
-    s = "The following " & dctUsed.Count & " Public declared items had been found in at least one code line:":  WriteToFile s
-    WriteToFile String(Len(s), "-")
-    
-    For Each vPublic In dctUsed
-        Set cll = dctUsed(vPublic)
-        lMaxPublic = mPublic.Max(lMaxPublic, Len(vPublic))
-        lMaxUsing = mPublic.Max(lMaxUsing, Len(cll(5)))
-    Next vPublic
-    
-    WriteToFile Align("Public item", lMaxPublic, AlignLeft) & " " & Align("Used by (example)", lMaxUsing + 1, AlignLeft) & ": " & "In code line"
-    WriteToFile String(lMaxPublic, "-") & " " & String(lMaxUsing + 2, "-") & " " & String(80, "-")
-    
-    For Each vPublic In dctUsed
-        Set cll = dctUsed(vPublic)
-        sComp = Split(vPublic, ".")(0)
-        sProc = Split(vPublic, ".")(1)
-        WriteToFile Align(vPublic, lMaxPublic + 1, AlignLeft, , ".") & Align(cll(5), lMaxUsing + 1, AlignLeft, , ".") & ": " & cll(7)
-    Next vPublic
-        
-    OpenUrlEtc sFile, WIN_NORMAL
+    DisplayResult
     
 xt: EoP ErrSrc(PROC)
-
-#If ExecTrace = 1 Then
-    mTrc.Dsply
-#End If
     Exit Sub
 
 eh: Select Case ErrMsg(ErrSrc(PROC))
@@ -465,7 +521,6 @@ End Sub
 
 Private Function WbkSelect() As String
     Dim fDialog As FileDialog
-    Dim result  As Integer
 
     Set fDialog = Application.FileDialog(msoFileDialogFilePicker)
     

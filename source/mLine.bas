@@ -2,23 +2,17 @@ Attribute VB_Name = "mLine"
 Option Explicit
 
 Public Function LineExcluded(ByVal l_line As String) As Boolean
-
-    Static vExcludedCodeLines   As Variant
-    Static bInitialized         As Boolean
-    Dim v                       As Variant
     
-    If mUnused.ExcludedCodeLines = vbNullString Then Exit Function
-    If Not bInitialized Then
-        vExcludedCodeLines = Split(mUnused.ExcludedCodeLines, vbCrLf)
-        bInitialized = True
+    Dim v As Variant
+    
+    If VarType(vExcludedCodeLines) = vbArray Then
+        For Each v In vExcludedCodeLines
+            If l_line Like "*" & v & "*" Then
+                LineExcluded = True
+                Exit Function
+            End If
+        Next v
     End If
-    
-    For Each v In vExcludedCodeLines
-        If l_line Like "*" & v & "*" Then
-            LineExcluded = True
-            Exit Function
-        End If
-    Next v
     
 End Function
 
@@ -214,7 +208,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     
@@ -598,14 +592,14 @@ Public Function DeclaresInstanceGlobal(ByRef c_line As String, _
     If c_line Like "* As New *" Then
 '        Debug.Print c_vbcm.Parent.name & ", Line number=" & c_line_no & ", Line= >" & c_line & "<"
         mPublic.DeclaredAs c_line, c_as
-        DeclaresInstanceGlobal = mClass.IsModule(c_as)
+        DeclaresInstanceGlobal = mClass.IsClassModule(c_as)
         If Not DeclaresInstanceGlobal Then GoTo xt
         c_item = Trim(Split(c_line, " As New ")(0))
         c_item = Trim(Split(c_item, " ")(UBound(Split(c_item, " "))))
     ElseIf c_line Like "* As *" Then
 '        Debug.Print c_vbcm.Parent.name & ", Line number=" & c_line_no & ", Line= >" & c_line & "<"
         mPublic.DeclaredAs c_line, c_as
-        DeclaresInstanceGlobal = mClass.IsModule(c_as)
+        DeclaresInstanceGlobal = mClass.IsClassModule(c_as)
         If Not DeclaresInstanceGlobal Then GoTo xt
         c_item = Trim(Split(c_line, " As ")(0))
         c_item = Trim(Split(c_item, " ")(UBound(Split(c_item, " "))))
@@ -677,18 +671,16 @@ Public Function DeclaresPublicItem(ByRef c_line_no As Long, _
             DeclaresPublicItem = False
             GoTo xt
             
-        Case c_line Like "Public Const *":          Item "Public Const ", c_line, c_item:                 c_kind_of_item = enConstant
-        Case c_line Like "Public Sub *"
-                                                    If sComp = "mExport" Then Stop
-                                                    mPublic.Item "Public Sub ", c_line, c_item:                   c_kind_of_item = enSub
-        Case c_line Like "Public Function *":       mPublic.ItemAs "Public Function ", c_line, c_item, c_as:      c_kind_of_item = enFunction
-        Case c_line Like "Public Property Get *":   mPublic.ItemAs "Public Property Get ", c_line, c_item, c_as:  c_kind_of_item = enPropertyGet
-        Case c_line Like "Public Property Let *":   mPublic.Item "Public Property Let ", c_line, c_item:          c_kind_of_item = enPropertyGet
-        Case c_line Like "Public Property Set *":   mPublic.Item "Public Property Set ", c_line, c_item:          c_kind_of_item = enPropertySet
-        Case c_line Like "Friend Property Get *":   mPublic.ItemAs "Friend Property Get ", c_line, c_item, c_as:  c_kind_of_item = enPropertyGet
-        Case c_line Like "Friend Property Let *":   mPublic.Item "Friend Property Let ", c_line, c_item:          c_kind_of_item = enPropertyLet
-        Case c_line Like "Friend Property Set *":   mPublic.Item "Friend Property Set ", c_line, c_item:          c_kind_of_item = enPropertySet
-        Case c_line Like "Public *":                mPublic.Variable "Public ", c_line, c_item, c_as:             c_kind_of_item = enVariable
+        Case c_line Like "Public Const *":          mPublic.Item "Public Const ", c_line, c_item:                   c_kind_of_item = enConstant
+        Case c_line Like "Public Sub *":            mPublic.Item "Public Sub ", c_line, c_item:                     c_kind_of_item = enSub
+        Case c_line Like "Public Function *":       mPublic.ItemAs "Public Function ", c_line, c_item, c_as:        c_kind_of_item = enFunction
+        Case c_line Like "Public Property Get *":   mPublic.ItemAs "Public Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
+        Case c_line Like "Public Property Let *":   mPublic.Item "Public Property Let ", c_line, c_item:            c_kind_of_item = enPropertyGet
+        Case c_line Like "Public Property Set *":   mPublic.Item "Public Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
+        Case c_line Like "Friend Property Get *":   mPublic.ItemAs "Friend Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
+        Case c_line Like "Friend Property Let *":   mPublic.Item "Friend Property Let ", c_line, c_item:            c_kind_of_item = enPropertyLet
+        Case c_line Like "Friend Property Set *":   mPublic.Item "Friend Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
+        Case c_line Like "Public *":                mPublic.Variable "Public ", c_line, c_item, c_as:               c_kind_of_item = enVariable
     End Select
             
     If c_item = vbNullString Then

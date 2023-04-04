@@ -27,21 +27,24 @@ End Sub
  
  Since the analysis may take a couple of seconds, the progress is displayed in the Application.StatusBar
 
+## The service covers the Public items
+- Constants
+- Variables
+- Sub-Procedures
+- Functions
+- Class Instances
+- Properties (Get, Let, Set)
+- Methods (Function, Sub in Class-Modules)
+  
 ## The service considers, recognizes, copes with:
 - Code lines continued
 - Code lines with multiple sub-lines (separated by ': ')
 - Class Instances (Project public, VBComponent global, and Procedure local)
 - OnAction in Worksheet Controls
-- Public items:
-  - Constants
-  - Variables
-  - Sub-Procedures
-  - Functions
-  - Properties (Get, Let, Set)
-  - Methods (Function, Sub in Class-Modules)
-  
+- Nested With End With instructions for Class Instances
+
 ## Performance
-Though the performance shouldn't really matter for a service used only occasionally:<br>
+Though the performance shouldn't really matter for a service used only occasionally:
 ```
  12 Thousand analyzed code lines (2 thousand skipped) in
 692 Procedures had been analyzed for 

@@ -118,150 +118,10 @@ Public Function ForBeingParsed(ByVal c_line_to_parse As String, _
 xt: ForBeingParsed = c_line_for_parsing
     Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
-End Function
-
-Private Function ErrMsg(ByVal err_source As String, _
-               Optional ByVal err_no As Long = 0, _
-               Optional ByVal err_dscrptn As String = vbNullString, _
-               Optional ByVal err_line As Long = 0) As Variant
-' ------------------------------------------------------------------------------
-' Universal error message display service including a debugging option active
-' when the Conditional Compile Argument 'Debugging = 1' and an optional
-' additional "About the error:" section displaying text connected to an error
-' message by two vertical bars (||).
-'
-' A copy of this function is used in each procedure with an error handling
-' (On error Goto eh).
-'
-' The function considers the Common VBA Error Handling Component (ErH) which
-' may be installed (Conditional Compile Argument 'ErHComp = 1') and/or the
-' Common VBA Message Display Component (mMsg) installed (Conditional Compile
-' Argument 'MsgComp = 1'). Only when none of the two is installed the error
-' message is displayed by means of the VBA.MsgBox.
-'
-' Usage: Example with the Conditional Compile Argument 'Debugging = 1'
-'
-'        Private/Public <procedure-name>
-'            Const PROC = "<procedure-name>"
-'
-'            On Error Goto eh
-'            ....
-'        xt: Exit Sub/Function/Property
-'
-'        eh: Select Case ErrMsg(ErrSrc(PROC))
-'               Case vbResume:  Stop: Resume
-'               Case Else:      GoTo xt
-'            End Select
-'        End Sub/Function/Property
-'
-' Uses:
-' - AppErr For programmed application errors (Err.Raise AppErr(n), ....) the
-'          function is used to turn the positive number into a negative one.
-'          The error message will regard a negative error number as an
-'          'Application Error' and will use AppErr to turn it back for
-'          the message into its original positive number. Together with the
-'          ErrSrc there will be no need to maintain numerous different error
-'          numbers for a VB-Project.
-' - ErrSrc The caller provides the (name of the) source of the error through
-'          the module specific function ErrSrc(PROC) which adds the module
-'          name to the procedure name.
-'
-' W. Rauschenberger Berlin, May 2022
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When the Common VBA Error Handling Component (mErH) is installed in the
-    '~~ VB-Project (which includes the mMsg component) the mErh.ErrMsg service
-    '~~ is preferred since it provides some enhanced features like a path to the
-    '~~ error.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mErH.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#ElseIf MsgComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When only the Common Message Services Component (mMsg) is installed but
-    '~~ not the mErH component the mMsg.ErrMsg service is preferred since it
-    '~~ provides an enhanced layout and other features.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mMsg.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#End If
-    '~~ -------------------------------------------------------------------
-    '~~ When neither the mMsg nor the mErH component is installed the error
-    '~~ message is displayed by means of the VBA.MsgBox
-    '~~ -------------------------------------------------------------------
-    Dim ErrBttns    As Variant
-    Dim ErrAtLine   As String
-    Dim ErrDesc     As String
-    Dim ErrLine     As Long
-    Dim ErrNo       As Long
-    Dim ErrSrc      As String
-    Dim ErrText     As String
-    Dim ErrTitle    As String
-    Dim ErrType     As String
-    Dim ErrAbout    As String
-        
-    '~~ Obtain error information from the Err object for any argument not provided
-    If err_no = 0 Then err_no = Err.Number
-    If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.Source
-    If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
-    If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
-    
-    If InStr(err_dscrptn, "||") <> 0 Then
-        ErrDesc = Split(err_dscrptn, "||")(0)
-        ErrAbout = Split(err_dscrptn, "||")(1)
-    Else
-        ErrDesc = err_dscrptn
-    End If
-    
-    '~~ Determine the type of error
-    Select Case err_no
-        Case Is < 0
-            ErrNo = AppErr(err_no)
-            ErrType = "Application Error "
-        Case Else
-            ErrNo = err_no
-            If (InStr(1, err_dscrptn, "DAO") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC Teradata Driver") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC") <> 0 _
-            Or InStr(1, err_dscrptn, "Oracle") <> 0) _
-            Then ErrType = "Database Error " _
-            Else ErrType = "VB Runtime Error "
-    End Select
-    
-    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"   ' assemble ErrSrc from available information"
-    If err_line <> 0 Then ErrAtLine = " at line " & err_line                    ' assemble ErrAtLine from available information
-    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")         ' assemble ErrTitle from available information
-       
-    ErrText = "Error: " & vbLf & _
-              ErrDesc & vbLf & vbLf & _
-              "Source: " & vbLf & _
-              err_source & ErrAtLine
-    If ErrAbout <> vbNullString _
-    Then ErrText = ErrText & vbLf & vbLf & _
-                  "About: " & vbLf & _
-                  ErrAbout
-    
-#If Debugging Then
-    ErrBttns = vbYesNo
-    ErrText = ErrText & vbLf & vbLf & _
-              "Debugging:" & vbLf & _
-              "Yes    = Resume Error Line" & vbLf & _
-              "No     = Terminate"
-#Else
-    ErrBttns = vbCritical
-#End If
-    
-    ErrMsg = MsgBox(Title:=ErrTitle _
-                  , Prompt:=ErrText _
-                  , Buttons:=ErrBttns)
-xt: Exit Function
-
 End Function
 
 Private Function ErrSrc(ByVal e_proc As String) As String
@@ -289,7 +149,7 @@ Public Function Ignore(ByVal c_line As String) As String
     
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -368,7 +228,7 @@ Public Function NextLine(ByVal n_vbcm As CodeModule, _
     
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -497,7 +357,7 @@ Public Function RefersToPublicItem(ByVal c_line_to_explore As String, _
     End If
              
     If InStr(c_line_to_explore, "." & sPublicItemItem & " ") <> 0 Then
-        If mPublic.IsUniqueItem(sPublicItemItem) Then
+        If mItems.IsUniqueItem(sPublicItemItem) Then
             '~~ When unique this is the public item checked
             RefersToPublicItem = True
             GoTo xt
@@ -505,7 +365,7 @@ Public Function RefersToPublicItem(ByVal c_line_to_explore As String, _
     End If
     
     If InStr(c_line_to_explore, " " & sPublicItemItem & " ") <> 0 Then
-        If mPublic.IsUniqueItem(sPublicItemItem) Then
+        If mItems.IsUniqueItem(sPublicItemItem) Then
             '~~ when unique even unqualified is a clear usage indication
             RefersToPublicItem = True
             GoTo xt
@@ -519,7 +379,7 @@ Public Function RefersToPublicItem(ByVal c_line_to_explore As String, _
     Select Case True
         Case c_line_to_explore Like "* " & sPublicItemItem & " *"
             '~~ This is an unqualified call of a Public item
-            If mPublic.IsUniqueItem(sPublicItemItem) Then
+            If mItems.IsUniqueItem(sPublicItemItem) Then
                 '~~ Since the name is unique the unqualified call concerns to the Public item
                 RefersToPublicItem = True
                 GoTo xt
@@ -569,7 +429,7 @@ Public Function RefersToPublicItem(ByVal c_line_to_explore As String, _
         
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -591,14 +451,14 @@ Public Function DeclaresInstanceGlobal(ByRef c_line As String, _
     
     If c_line Like "* As New *" Then
 '        Debug.Print c_vbcm.Parent.name & ", Line number=" & c_line_no & ", Line= >" & c_line & "<"
-        mPublic.DeclaredAs c_line, c_as
+        mItems.DeclaredAs c_line, c_as
         DeclaresInstanceGlobal = mClass.IsClassModule(c_as)
         If Not DeclaresInstanceGlobal Then GoTo xt
         c_item = Trim(Split(c_line, " As New ")(0))
         c_item = Trim(Split(c_item, " ")(UBound(Split(c_item, " "))))
     ElseIf c_line Like "* As *" Then
 '        Debug.Print c_vbcm.Parent.name & ", Line number=" & c_line_no & ", Line= >" & c_line & "<"
-        mPublic.DeclaredAs c_line, c_as
+        mItems.DeclaredAs c_line, c_as
         DeclaresInstanceGlobal = mClass.IsClassModule(c_as)
         If Not DeclaresInstanceGlobal Then GoTo xt
         c_item = Trim(Split(c_line, " As ")(0))
@@ -607,7 +467,7 @@ Public Function DeclaresInstanceGlobal(ByRef c_line As String, _
     
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -650,7 +510,7 @@ Public Function DeclaresPublicItem(ByRef c_line_no As Long, _
                 If lLoopStop > 100 Then Stop
                 c_line = c_line & " "
                 sItem = Split(c_line, " ")(0)
-                ItemCollect sComp, sItem, c_line_no, c_line, c_kind_of_comp, enUserDefinedType
+                CollectPublicItem sComp, sItem, c_line_no, c_line, c_kind_of_comp, enUserDefinedType
                 sLine = mLine.NextLine(c_vbcm, c_line_no, lStartsAt)
             Wend
             DeclaresPublicItem = False
@@ -665,22 +525,22 @@ Public Function DeclaresPublicItem(ByRef c_line_no As Long, _
                 If lLoopStop > 500 Then Stop
                 c_line = c_line & " "
                 c_line = Split(c_line, " ")(0)
-                ItemCollect sComp, sItem, c_line_no, c_line, c_kind_of_comp, enEnumeration
+                CollectPublicItem sComp, sItem, c_line_no, c_line, c_kind_of_comp, enEnumeration
                 sLine = mLine.NextLine(c_vbcm, c_line_no, lStartsAt)
             Wend
             DeclaresPublicItem = False
             GoTo xt
             
-        Case c_line Like "Public Const *":          mPublic.Item "Public Const ", c_line, c_item:                   c_kind_of_item = enConstant
-        Case c_line Like "Public Sub *":            mPublic.Item "Public Sub ", c_line, c_item:                     c_kind_of_item = enSub
-        Case c_line Like "Public Function *":       mPublic.ItemAs "Public Function ", c_line, c_item, c_as:        c_kind_of_item = enFunction
-        Case c_line Like "Public Property Get *":   mPublic.ItemAs "Public Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
-        Case c_line Like "Public Property Let *":   mPublic.Item "Public Property Let ", c_line, c_item:            c_kind_of_item = enPropertyGet
-        Case c_line Like "Public Property Set *":   mPublic.Item "Public Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
-        Case c_line Like "Friend Property Get *":   mPublic.ItemAs "Friend Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
-        Case c_line Like "Friend Property Let *":   mPublic.Item "Friend Property Let ", c_line, c_item:            c_kind_of_item = enPropertyLet
-        Case c_line Like "Friend Property Set *":   mPublic.Item "Friend Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
-        Case c_line Like "Public *":                mPublic.Variable "Public ", c_line, c_item, c_as:               c_kind_of_item = enVariable
+        Case c_line Like "Public Const *":          mItems.Item "Public Const ", c_line, c_item:                   c_kind_of_item = enConstant
+        Case c_line Like "Public Sub *":            mItems.Item "Public Sub ", c_line, c_item:                     c_kind_of_item = enSub
+        Case c_line Like "Public Function *":       mItems.ItemAs "Public Function ", c_line, c_item, c_as:        c_kind_of_item = enFunction
+        Case c_line Like "Public Property Get *":   mItems.ItemAs "Public Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
+        Case c_line Like "Public Property Let *":   mItems.Item "Public Property Let ", c_line, c_item:            c_kind_of_item = enPropertyGet
+        Case c_line Like "Public Property Set *":   mItems.Item "Public Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
+        Case c_line Like "Friend Property Get *":   mItems.ItemAs "Friend Property Get ", c_line, c_item, c_as:    c_kind_of_item = enPropertyGet
+        Case c_line Like "Friend Property Let *":   mItems.Item "Friend Property Let ", c_line, c_item:            c_kind_of_item = enPropertyLet
+        Case c_line Like "Friend Property Set *":   mItems.Item "Friend Property Set ", c_line, c_item:            c_kind_of_item = enPropertySet
+        Case c_line Like "Public *":                mItems.Variable "Public ", c_line, c_item, c_as:               c_kind_of_item = enVariable
     End Select
             
     If c_item = vbNullString Then
@@ -691,7 +551,7 @@ Public Function DeclaresPublicItem(ByRef c_line_no As Long, _
     
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select

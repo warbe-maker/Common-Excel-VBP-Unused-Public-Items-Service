@@ -1,7 +1,7 @@
-Attribute VB_Name = "mPublic"
+Attribute VB_Name = "mItems"
 Option Explicit
 ' ----------------------------------------------------------------------------
-' Standard Module mPublic
+' Standard Module mItems
 ' =======================
 ' Public services:
 ' - AddAscByKey Adds items to a Dictionary instantly oredered by key.
@@ -76,7 +76,6 @@ Private sProcParsed             As String
 Private sCompParsed             As String
 Private sItemPublic             As String
 Private dctCodeRefPublicItem    As Dictionary
-Private dctExcluded             As Dictionary
 Private dctOnActions            As Dictionary
 
 Public dctKindOfItem            As Dictionary
@@ -90,156 +89,6 @@ Public dctUsed                  As Dictionary
 Public dctUnused                As Dictionary
 Public sFile                    As String
                              
-Public Sub AddAscByKey(ByRef add_dct As Dictionary, _
-                       ByVal add_key As Variant, _
-                       ByVal add_item As Variant)
-' ------------------------------------------------------------------------------------
-' Adds to the Dictionary (add_dct) an item (add_item) in ascending order by the key
-' (add_key). When the key is an object with no Name property an error is raisede.
-'
-' Note: This is a copy of the DctAdd procedure with fixed options which may be copied
-'       into any VBProject's module in order to have it independant from this
-'       Common Component.
-'
-' W. Rauschenberger, Berlin Jan 2022
-' ------------------------------------------------------------------------------------
-    Const PROC = "AddAscByKey"
-    
-    On Error GoTo eh
-    Dim bDone           As Boolean
-    Dim dctTemp         As Dictionary
-    Dim vItemExisting   As Variant
-    Dim vKeyExisting    As Variant
-    Dim vValueExisting  As Variant ' the entry's add_key/add_item value for the comparison with the vValueNew
-    Dim vValueNew       As Variant ' the argument add_key's/add_item's value
-    Dim bStayWithFirst  As Boolean
-    Dim bOrderByItem    As Boolean
-    Dim bOrderByKey     As Boolean
-    Dim bSeqAscending   As Boolean
-    Dim bCaseIgnored    As Boolean
-    Dim bCaseSensitive  As Boolean
-    Dim bEntrySequence  As Boolean
-    
-    If add_dct Is Nothing Then Set add_dct = New Dictionary
-    
-    '~~ Plausibility checks
-    bOrderByItem = False
-    bOrderByKey = True
-    bSeqAscending = True
-    bCaseIgnored = False
-    bCaseSensitive = True
-    bStayWithFirst = True
-    bEntrySequence = False
-    
-    With add_dct
-        '~~ When it is the very first add_item or the add_order option
-        '~~ is entry sequence the add_item will just be added
-        If .Count = 0 Or bEntrySequence Then
-            .Add add_key, add_item
-            GoTo xt
-        End If
-        
-        '~~ When the add_order is by add_key and not stay with first entry added
-        '~~ and the add_key already exists the add_item is updated
-        If bOrderByKey And Not bStayWithFirst Then
-            If .Exists(add_key) Then
-                If IsObject(add_item) Then Set .Item(add_key) = add_item Else .Item(add_key) = add_item
-                GoTo xt
-            End If
-        End If
-    End With
-        
-    '~~ When the add_order argument is an object but does not have a name property raise an error
-    If bOrderByKey Then
-        If IsObject(add_key) Then
-            On Error Resume Next
-            add_key.name = add_key.name
-            If Err.Number <> 0 _
-            Then Err.Raise AppErr(7), ErrSrc(PROC), "The add_order option is by add_key, the add_key is an object but does not have a name property!"
-        End If
-    ElseIf bOrderByItem Then
-        If IsObject(add_item) Then
-            On Error Resume Next
-            add_item.name = add_item.name
-            If Err.Number <> 0 _
-            Then Err.Raise AppErr(8), ErrSrc(PROC), "The add_order option is by add_item, the add_item is an object but does not have a name property!"
-        End If
-    End If
-    
-    vValueNew = AddAscByKeyValue(add_key)
-    
-    With add_dct
-        '~~ Get the last entry's add_order value
-        vValueExisting = AddAscByKeyValue(.Keys()(.Count - 1))
-        
-        '~~ When the add_order mode is ascending and the last entry's add_key or add_item
-        '~~ is less than the add_order argument just add it and exit
-        If bSeqAscending And vValueNew > vValueExisting Then
-            .Add add_key, add_item
-            GoTo xt
-        End If
-    End With
-        
-    '~~ Since the new add_key/add_item couldn't simply be added to the Dictionary it will
-    '~~ be inserted before or after the add_key/add_item as specified.
-    Set dctTemp = New Dictionary
-    bDone = False
-    
-    For Each vKeyExisting In add_dct
-        
-        If IsObject(add_dct.Item(vKeyExisting)) _
-        Then Set vItemExisting = add_dct.Item(vKeyExisting) _
-        Else vItemExisting = add_dct.Item(vKeyExisting)
-        
-        With dctTemp
-            If bDone Then
-                '~~ All remaining items just transfer
-                .Add vKeyExisting, vItemExisting
-            Else
-                vValueExisting = AddAscByKeyValue(vKeyExisting)
-            
-                If vValueExisting = vValueNew And bOrderByItem And bSeqAscending And Not .Exists(add_key) Then
-                    If bStayWithFirst Then
-                        .Add vKeyExisting, vItemExisting:   bDone = True ' not added
-                    Else
-                        '~~ The add_item already exists. When the add_key doesn't exist and bStayWithFirst is False the add_item is added
-                        .Add vKeyExisting, vItemExisting:   .Add add_key, add_item:                     bDone = True
-                    End If
-                ElseIf bSeqAscending And vValueExisting > vValueNew Then
-                    .Add add_key, add_item:                 .Add vKeyExisting, vItemExisting:   bDone = True
-                Else
-                    .Add vKeyExisting, vItemExisting ' transfer existing add_item, wait for the one which fits within sequence
-                End If
-            End If
-        End With ' dctTemp
-    Next vKeyExisting
-    
-    '~~ Return the temporary dictionary with the new add_item added and all exiting items in add_dct transfered to it
-    Set add_dct = dctTemp
-    Set dctTemp = Nothing
-
-xt: Exit Sub
-
-eh: Select Case ErrMsg(ErrSrc(PROC))
-        Case vbResume:  Stop: Resume
-        Case Else:      GoTo xt
-    End Select
-End Sub
-
-Private Function AddAscByKeyValue(ByVal add_key As Variant) As Variant
-' ----------------------------------------------------------------------------
-' When add_key is an object its name becomes the sort order value else the
-' the value is returned as is.
-' ----------------------------------------------------------------------------
-    If VarType(add_key) = vbObject Then
-        On Error Resume Next ' the object may not have a Name property
-        AddAscByKeyValue = add_key.name
-        If Err.Number <> 0 Then Set AddAscByKeyValue = add_key
-    Else
-        AddAscByKeyValue = add_key
-    End If
-End Function
-
 Private Function Align(ByVal align_s As String, _
                        ByVal align_lngth As Long, _
               Optional ByVal align_mode As StringAlign = AlignLeft, _
@@ -284,35 +133,7 @@ Private Function AppErr(ByVal app_err_no As Long) As Long
     If app_err_no >= 0 Then AppErr = app_err_no + vbObjectError Else AppErr = Abs(app_err_no - vbObjectError)
 End Function
 
-Private Sub BoC(ByVal boc_id As String, ParamArray b_arguments() As Variant)
-' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(C)ode with id (boc_id) trace. Procedure to be copied as Private
-' into any module potentially using the Common VBA Execution Trace Service. Has
-' no effect when Conditional Compile Argument is 0 or not set at all.
-' Note: The begin id (boc_id) has to be identical with the paired EoC statement.
-' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ExecTrace = 1 Then
-    mTrc.BoC boc_id, s
-#End If
-End Sub
-
-Private Sub BoP(ByVal b_proc As String, ParamArray b_arguments() As Variant)
-' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(P)rocedure named (b_proc). Procedure to be copied as Private
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
-' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ErHComp = 1 Then
-    mErH.BoP b_proc, s
-#ElseIf ExecTrace = 1 Then
-    mTrc.BoP b_proc, s
-#End If
-End Sub
-
-Public Sub Collect()
+Public Sub CollectPublicItems()
 ' ------------------------------------------------------------------------------
 ' Collects (in Dictionary with comp-name.item-name as key):
 ' 1. All those VBComponenKoItemts not explicitely excluded (dctComponenKoItemts)
@@ -322,7 +143,7 @@ Public Sub Collect()
 ' 4. All public items indicating unique True or False (dctPublicItemsUnique)
 ' 5. All VBComponenKoItemt's Procedures with their start and enKoItemd line (dctProcLines)
 ' ------------------------------------------------------------------------------
-    Const PROC  As String = "Collect"
+    Const PROC  As String = "CollectPublicItems"
     
     On Error GoTo eh
     Dim cllComp         As Collection
@@ -341,15 +162,9 @@ Public Sub Collect()
     Dim enKoItem        As enKindOfItem
     Dim enKoComp        As enKindOfComponent
     
-    BoP ErrSrc(PROC)
-    CompsCollect Excluded
-    mProc.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
-    mClass.CollectInstncsVBPGlobal  ' Collect all class instance which are VB-Project global
-    mClass.CollectInstncsCompGlobal ' Collect all class instances which are ComponenKoItemt global
-    mClass.CollectInstncsProcLocal  ' Collect all class instances in Procedures
-    CollectOnActions
+    mBasic.BoP ErrSrc(PROC)
     
-    '~~ Collect Public declares Sub, Function, Property
+    '~~ Collect Public declared Sub, Function, Property
     For Each vComp In dctComps
         sComp = vComp
         Set cllComp = dctComps(sComp)
@@ -364,39 +179,21 @@ Public Sub Collect()
             sLine = mProc.CollLine(cllProc)
             i = mProc.CollLineFrom(cllProc)
             If mLine.DeclaresPublicItem(i, sLine, sItem, sAs, vbcm, enKoComp, enKoItem) Then
-                ItemCollect sComp, sItem, i, sLine, enKoComp, enKoItem
+                CollectPublicItem sComp, sItem, i, sLine, enKoComp, enKoItem
             End If
         Next vProc
     Next vComp
         
-xt: EoP ErrSrc(PROC)
+xt: mBasic.EoP ErrSrc(PROC)
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
 End Sub
 
-Private Sub CollectExcluded(ByVal s As String)
-' ------------------------------------------------------------------------------------
-'
-' ------------------------------------------------------------------------------------
-    Dim v As Variant
-    Dim dct As New Dictionary
-    
-    dct.Add "mUnusedPublic", vbNullString ' The component excludes itself
-    If s <> vbNullString Then
-        For Each v In Split(s, ",")
-            dct.Add Trim(v), vbNullString
-        Next v
-    End If
-    Set dctExcluded = dct
-    Set dct = Nothing
-
-End Sub
-
-Private Sub CollectOnActions()
+Public Sub CollectOnActions()
 ' ------------------------------------------------------------------------------------
 ' Collects all OnActions (which must be Public items) in a Dictionary (dctOnActions)
 ' with the OnAction as key.
@@ -416,7 +213,7 @@ Private Sub CollectOnActions()
             If sOnAction <> vbNullString Then
                 sOnAction = Split(sOnAction, "!")(1)
                 If Not dct.Exists(sOnAction) Then
-                    AddAscByKey dct, sOnAction, vbNullString
+                    dct.Add sOnAction, vbNullString
                 End If
             End If
         Next shp
@@ -431,252 +228,8 @@ Public Function CompCollKind(ByVal cll As Collection) As enKindOfComponent:    C
 
 Public Function CompCollVBC(ByVal cll As Collection) As VBComponent:   Set CompCollVBC = cll(1):   End Function
 
-Private Sub CompsCollect(ByVal c_excluded As String)
-' ------------------------------------------------------------------------------------
-' Provides a Dictionary (dctComps) with all components not excluded
-' XrefVBProject with the VBComponent's Name as the key and the VBComponent as item.
-' ------------------------------------------------------------------------------------
-    Const PROC  As String = "CompsCollect"
-    
-    On Error GoTo eh
-    Dim vbc     As VBComponent
-    Dim enKind  As enKindOfComponent
-    Dim sComp   As String
-    Dim cll     As Collection
-    
-    BoP ErrSrc(PROC)
-    Set dctComps = New Dictionary
-    CollectExcluded c_excluded
-    
-    For Each vbc In wbkServiced.VBProject.VBComponents
-        Set cll = New Collection
-        cll.Add vbc
-        With vbc
-            sComp = .name
-            Select Case .Type
-                Case vbext_ct_ClassModule
-                    enKind = enClassModule
-                Case vbext_ct_Document
-                    If IsSheet(sComp, wbkServiced) _
-                    Then enKind = enWorksheet _
-                    Else enKind = enWorkbook
-                Case vbext_ct_MSForm:       enKind = enUserForm
-                Case vbext_ct_StdModule:    enKind = enStandardModule
-            End Select
-        
-            If Not IsExcluded(sComp) Then
-                If Not dctComps.Exists(sComp) Then
-                    cll.Add enKind
-                    AddAscByKey dctComps, .name, cll
-                    Set cll = Nothing
-                End If
-                If .Type = vbext_ct_ClassModule Then
-                    mClass.IsClassModule(sComp, vbc) = True
-                End If
-            End If
-        End With
-    Next vbc
-
-xt: EoP ErrSrc(PROC)
-    Exit Sub
-
-eh: Select Case ErrMsg(ErrSrc(PROC))
-        Case vbResume:  Stop: Resume
-        Case Else:      GoTo xt
-    End Select
-End Sub
-
-Private Sub EoC(ByVal eoc_id As String, ParamArray b_arguments() As Variant)
-' ------------------------------------------------------------------------------
-' (E)nd-(o)f-(C)ode id (eoc_id) trace. Procedure to be copied as Private into
-' any module potentially using the Common VBA Execution Trace Service. Has no
-' effect when the Conditional Compile Argument is 0 or not set at all.
-' Note: The end id (eoc_id) has to be identical with the paired BoC statement.
-' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ExecTrace = 1 Then
-    mTrc.EoC eoc_id, s
-#End If
-End Sub
-
-Private Sub EoP(ByVal e_proc As String, _
-      Optional ByVal e_inf As String = vbNullString)
-' ------------------------------------------------------------------------------
-' (E)nd-(o)f-(P)rocedure named (e_proc). Procedure to be copied as Private Sub
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    mErH.EoP e_proc
-#ElseIf ExecTrace = 1 Then
-    mTrc.EoP e_proc, e_inf
-#End If
-End Sub
-
-Private Function ErrMsg(ByVal err_source As String, _
-               Optional ByVal err_no As Long = 0, _
-               Optional ByVal err_dscrptn As String = vbNullString, _
-               Optional ByVal err_line As Long = 0) As Variant
-' ------------------------------------------------------------------------------
-' Universal error message display service including a debugging option active
-' when the Conditional Compile Argument 'Debugging = 1' and an optional
-' additional "About the error:" section displaying text connected to an error
-' message by two vertical bars (||).
-'
-' A copy of this function is used in each procedure with an error handling
-' (On error Goto eh).
-'
-' The function considers the Common VBA Error Handling Component (ErH) which
-' may be installed (Conditional Compile Argument 'ErHComp = 1') and/or the
-' Common VBA Message Display Component (mMsg) installed (Conditional Compile
-' Argument 'MsgComp = 1'). Only when none of the two is installed the error
-' message is displayed by means of the VBA.MsgBox.
-'
-' Usage: Example with the Conditional Compile Argument 'Debugging = 1'
-'
-'        Private/Public <procedure-name>
-'            Const PROC = "<procedure-name>"
-'
-'            On Error Goto eh
-'            ....
-'        xt: Exit Sub/Function/Property
-'
-'        eh: Select Case ErrMsg(ErrSrc(PROC))
-'               Case vbResume:  Stop: Resume
-'               Case Else:      GoTo xt
-'            End Select
-'        End Sub/Function/Property
-'
-' Uses:
-' - AppErr For programmed application errors (Err.Raise AppErr(n), ....) the
-'          function is used to turn the positive number into a negative one.
-'          The error message will regard a negative error number as an
-'          'Application Error' and will use AppErr to turn it back for
-'          the message into its original positive number. Together with the
-'          ErrSrc there will be no need to maintain numerous different error
-'          numbers for a VB-Project.
-' - ErrSrc The caller provides the (name of the) source of the error through
-'          the module specific function ErrSrc(PROC) which adds the module
-'          name to the procedure name.
-'
-' W. Rauschenberger Berlin, May 2022
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When the Common VBA Error Handling Component (mErH) is installed in the
-    '~~ VB-Project (which includes the mMsg component) the mErh.ErrMsg service
-    '~~ is preferred since it provides some enhanced features like a path to the
-    '~~ error.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mErH.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#ElseIf MsgComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When only the Common Message Services Component (mMsg) is installed but
-    '~~ not the mErH component the mMsg.ErrMsg service is preferred since it
-    '~~ provides an enhanced layout and other features.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mMsg.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#End If
-    '~~ -------------------------------------------------------------------
-    '~~ When neither the mMsg nor the mErH component is installed the error
-    '~~ message is displayed by means of the VBA.MsgBox
-    '~~ -------------------------------------------------------------------
-    Dim ErrBttns    As Variant
-    Dim ErrAtLine   As String
-    Dim ErrDesc     As String
-    Dim ErrLine     As Long
-    Dim ErrNo       As Long
-    Dim ErrSrc      As String
-    Dim ErrText     As String
-    Dim ErrTitle    As String
-    Dim ErrType     As String
-    Dim ErrAbout    As String
-        
-    '~~ Obtain error information from the Err object for any argument not provided
-    If err_no = 0 Then err_no = Err.Number
-    If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.Source
-    If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
-    If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
-    
-    If InStr(err_dscrptn, "||") <> 0 Then
-        ErrDesc = Split(err_dscrptn, "||")(0)
-        ErrAbout = Split(err_dscrptn, "||")(1)
-    Else
-        ErrDesc = err_dscrptn
-    End If
-    
-    '~~ Determine the type of error
-    Select Case err_no
-        Case Is < 0
-            ErrNo = AppErr(err_no)
-            ErrType = "Application Error "
-        Case Else
-            ErrNo = err_no
-            If (InStr(1, err_dscrptn, "DAO") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC Teradata Driver") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC") <> 0 _
-            Or InStr(1, err_dscrptn, "Oracle") <> 0) _
-            Then ErrType = "Database Error " _
-            Else ErrType = "VB Runtime Error "
-    End Select
-    
-    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"   ' assemble ErrSrc from available information"
-    If err_line <> 0 Then ErrAtLine = " at line " & err_line                    ' assemble ErrAtLine from available information
-    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")         ' assemble ErrTitle from available information
-       
-    ErrText = "Error: " & vbLf & _
-              ErrDesc & vbLf & vbLf & _
-              "Source: " & vbLf & _
-              err_source & ErrAtLine
-    If ErrAbout <> vbNullString _
-    Then ErrText = ErrText & vbLf & vbLf & _
-                  "About: " & vbLf & _
-                  ErrAbout
-    
-#If Debugging Then
-    ErrBttns = vbYesNo
-    ErrText = ErrText & vbLf & vbLf & _
-              "Debugging:" & vbLf & _
-              "Yes    = Resume Error Line" & vbLf & _
-              "No     = Terminate"
-#Else
-    ErrBttns = vbCritical
-#End If
-    
-    ErrMsg = MsgBox(Title:=ErrTitle _
-                  , Prompt:=ErrText _
-                  , Buttons:=ErrBttns)
-xt: Exit Function
-
-End Function
-
 Private Function ErrSrc(ByVal e_proc As String) As String
-    ErrSrc = "mUnusedPublic" & "." & e_proc
-End Function
-
-Private Function IsExcluded(ByVal i_comp_name As String) As Boolean
-    IsExcluded = dctExcluded.Exists(i_comp_name)
-End Function
-
-Private Function IsSheet(ByVal i_comp_name As String, _
-                         ByVal i_wb As Workbook) As Boolean
-' ------------------------------------------------------------------------
-' Returns TRUE when the Component's name (i_comp_name) is a Worksheet's
-' CodeName in the Workbook (i_wb).
-' ------------------------------------------------------------------------
-    Dim ws As Worksheet
-    
-    For Each ws In i_wb.Worksheets
-        If ws.CodeName = i_comp_name Then
-            IsSheet = True
-            Exit For
-        End If
-    Next ws
-
+    ErrSrc = "mItems" & "." & e_proc
 End Function
 
 Public Function IsSheetDocMod(ByVal i_vbc As VBComponent, _
@@ -723,15 +276,11 @@ Public Sub Item(ByVal c_public As String, _
     c_item = Trim(Split(c_line, c_public)(1))
     c_item = Trim(Split(c_item, " ")(0))
     c_item = Trim(Split(c_item, "(")(0))
-'    If c_line Like "*Public Const *" Then
-'        c_item_value = Trim(Split(c_line & " ", " = ")(1))
-'        c_item_value = Split(c_item_value, " ")(0)
-'    End If
     If c_item = vbNullString Then Stop
     
 xt: Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -755,18 +304,18 @@ Public Sub DeclaredAs(ByVal c_line As String, _
     
 xt: Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
 End Sub
 
-Public Sub ItemCollect(ByVal c_comp As String, _
-                       ByVal c_item As String, _
-                       ByVal c_line_no As Long, _
-                       ByVal c_line As String, _
-                       ByVal c_kind_of_comp As enKindOfComponent, _
-                       ByVal c_kind_of_item As enKindOfItem)
+Public Sub CollectPublicItem(ByVal c_comp As String, _
+                             ByVal c_item As String, _
+                             ByVal c_line_no As Long, _
+                             ByVal c_line As String, _
+                             ByVal c_kind_of_comp As enKindOfComponent, _
+                             ByVal c_kind_of_item As enKindOfItem)
 ' ------------------------------------------------------------------------------
 ' Collects a Public item and additionally collects all VBComponents with a
 ' same named procedure.
@@ -774,6 +323,7 @@ Public Sub ItemCollect(ByVal c_comp As String, _
     Dim cll     As Collection
     Dim sKey    As String
     
+
     sKey = c_comp & "." & c_item
     lLenPublicItems = Max(lLenPublicItems, Len(sKey))
     If Not dctPublicItems.Exists(sKey) Then
@@ -783,7 +333,7 @@ Public Sub ItemCollect(ByVal c_comp As String, _
         cll.Add c_line_no
         cll.Add c_line
         If Not dctPublicItems.Exists(sKey) Then
-            AddAscByKey dctPublicItems, sKey, cll
+            dctPublicItems.Add sKey, cll
             Set cll = Nothing
         End If
     End If
@@ -792,16 +342,16 @@ Public Sub ItemCollect(ByVal c_comp As String, _
     If Not dctPublicItemsUnique.Exists(c_item) Then
         Set cll = New Collection
         cll.Add c_comp
-        AddAscByKey dctPublicItemsUnique, c_item, cll
+        dctPublicItemsUnique.Add c_item, cll
         Set cll = Nothing
     ElseIf dctPublicItemsUnique.Exists(c_item) Then
         Set cll = dctPublicItemsUnique(c_item)
         cll.Add c_comp
         dctPublicItemsUnique.Remove c_item
-        AddAscByKey dctPublicItemsUnique, c_item, cll
+        dctPublicItemsUnique.Add c_item, cll
         Set cll = Nothing
     End If
-    
+
 End Sub
 
 Public Function KoPstring(ByVal k_kop As vbext_ProcKind) As String
@@ -844,7 +394,7 @@ Public Sub ItemAs(ByVal c_public As String, _
     
 xt: Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -898,30 +448,13 @@ Public Function KindOfItem(ByVal en As enKindOfItem) As String
     
 End Function
 
-Private Sub Initialize()
-
-    Set dctProcs = Nothing              ' All Procedures if non-excluded VBComponents
-    Set dctPublicItemsUsed = Nothing    ' All Public items used
-    Set dctPublicItemsUnique = Nothing  ' Collection of all those public items with a unique name
-    Set dctComps = Nothing              ' All bot excluded VBComponents
-    Set dctProcLines = Nothing          ' All component's procedures with theit start and end line
-    Set dctPublicItems = Nothing        ' All Public ... and Friend ... - finally only those unused
-    
-    sFile = vbNullString
-    Set dctPublicItems = New Dictionary
-    Set dctKindOfItem = New Dictionary
-    Set dctPublicItemsUnique = New Dictionary
-    Set dctProcLines = New Dictionary
-    
-End Sub
-
-Public Sub PublicItemsUsageCollect()
+Public Sub CollectPublicUsage()
 ' ------------------------------------------------------------------------------------
 ' Loops through all collected Procedures (dctProcs) code lines and scans each
 ' for any of the collected Public items, removing those found from the collected
 ' public items. The finally remaing public items are listed as unused.
 ' ------------------------------------------------------------------------------------
-    Const PROC  As String = "PublicItemsUsageCollect"
+    Const PROC  As String = "CollectPublicUsage"
     
     On Error GoTo eh
     Dim cllUsed             As Collection
@@ -948,9 +481,7 @@ Public Sub PublicItemsUsageCollect()
     Dim lLinesAnalysed      As Long
     Dim lLinesSkipped       As Long
     
-    BoP ErrSrc(PROC)
-    Initialize
-    Collect
+    mBasic.BoP ErrSrc(PROC)
     
     Set dct = New Dictionary
     lItems = dctPublicItems.Count
@@ -1021,7 +552,7 @@ Public Sub PublicItemsUsageCollect()
                                     cllUsed.Add sCompParsed & "." & sProcParsed   ' comp.proc where the public item was found
                                     cllUsed.Add lStartsAt                           ' code line number where the public item was found
                                     cllUsed.Add sLineProc                           ' code line where the public item was found
-                                    AddAscByKey dctUsed, vPublic, cllUsed
+                                    dctUsed.Add vPublic, cllUsed
                                 End If
                                 '~~ Remove the found public item
                                 If dctPublicItems.Exists(vPublic) Then dctPublicItems.Remove (vPublic)
@@ -1037,7 +568,7 @@ nxp:                    Next vPublic
                                     cllUsed.Add sCompParsed & "." & sProcParsed
                                     cllUsed.Add lStartsAt
                                     cllUsed.Add sLineProc
-                                    AddAscByKey dctUsed, vPublic, cllUsed
+                                    dctUsed.Add vPublic, cllUsed
                                 End If
                                 If dctPublicItems.Exists(vPublic) Then dctPublicItems.Remove (vPublic)
                             End If
@@ -1061,10 +592,10 @@ nxt: Next vComp
     Set dct = Nothing
     Set cllUsed = Nothing
     
-xt: EoP ErrSrc(PROC)
+xt: mBasic.EoP ErrSrc(PROC)
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -1088,7 +619,7 @@ Public Sub Variable(ByVal c_public As String, _
     
 xt: Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -1131,7 +662,7 @@ Private Sub PushInstanceOnWithStack(ByVal r_comp_name As String, _
 xt: mWithStack.Push sClass
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select

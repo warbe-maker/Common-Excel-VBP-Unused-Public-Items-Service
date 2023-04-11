@@ -30,7 +30,7 @@ Public Sub CollectInstncsCompGlobal()
     Dim dct         As Dictionary
     Dim cllComp     As Collection
     
-    BoP ErrSrc(PROC)
+    mBasic.BoP ErrSrc(PROC)
     Set dctInstncsCompGlobal = New Dictionary
     For Each vComp In dctComps
         sComp = vComp
@@ -62,10 +62,10 @@ Public Sub CollectInstncsCompGlobal()
         End If
     Next vComp
 
-xt: EoP ErrSrc(PROC)
+xt: mBasic.EoP ErrSrc(PROC)
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -94,11 +94,11 @@ Public Sub CollectInstncsVBPGlobal()
     '~~ Collect per-se VBP-global Class instances (Workbook and the Worksheets)
     '~~ in the dctInstncsVBPrjctGlobal Directory under a vbNullString key !
     Set dct = New Dictionary
-    AddAscByKey dct, wbkServiced.CodeName, wbkServiced.CodeName
+    dct.Add wbkServiced.CodeName, wbkServiced.CodeName
     For Each wsh In wbkServiced.Worksheets
-        AddAscByKey dct, wsh.CodeName, wsh.CodeName
+        dct.Add wsh.CodeName, wsh.CodeName
     Next wsh
-    AddAscByKey dctInstncsVBPrjctGlobal, vbNullString, dct
+    dctInstncsVBPrjctGlobal.Add vbNullString, dct
     Set dct = Nothing
     
     '~~ Collect any Public declared variables, constants, and class instances
@@ -116,16 +116,16 @@ Public Sub CollectInstncsVBPGlobal()
             If sLine Like "Public *" Then
                 If DeclaresPublicItem(i, sLine, sItem, sAs, vbcm, enKoComp, enKoItem) Then
                     If mClass.IsClassModule(sAs, vbc) Then
-                        AddAscByKey dct, sItem, sAs
+                        dct.Add sItem, sAs
                     Else
-                        ItemCollect sComp, sItem, i, sLine, enKoComp, enKoItem
+                        CollectPublicItem sComp, sItem, i, sLine, enKoComp, enKoItem
                     End If
                     
                 End If
             End If
             sLine = mLine.NextLine(vbcm, i, lNextSubLine)
         Wend
-        AddAscByKey dctInstncsVBPrjctGlobal, sComp, dct
+        dctInstncsVBPrjctGlobal.Add sComp, dct
         Set dct = Nothing
     Next v
             
@@ -134,208 +134,6 @@ End Sub
 Private Function ErrSrc(ByVal e_proc As String) As String
     ErrSrc = "mClass" & "." & e_proc
 End Function
-
-'Public Function IsInstanceLocal(ByVal c_comp As String, _
-'                                ByVal c_proc As String, _
-'                                ByVal c_instance As String, _
-'                                ByRef c_class As String) As Boolean
-'' ------------------------------------------------------------------------------
-'' When the instance (c_instance) exists in the <comp>.<proc> the function
-'' returns TRUE and the name of the Class-Module of the instance (c_class).
-'' ------------------------------------------------------------------------------
-'    Const PROC = "IsInstanceLocal"
-'
-'    On Error GoTo eh
-'    Dim dct     As Dictionary
-'    Dim sKey    As String
-'
-'    sKey = c_comp & "." & c_proc
-'    If dctInstncsProcLocal.Exists(sKey) Then
-'        Set dct = dctInstncsProcLocal(sKey)
-'        If dct.Exists(c_instance) Then
-'            IsInstanceLocal = True
-'            c_class = dct(c_instance)
-'        End If
-'        Set dct = Nothing
-'    End If
-'
-'xt: Exit Function
-'
-'eh: Select Case ErrMsg(ErrSrc(PROC))
-'        Case vbResume:  Stop: Resume
-'        Case Else:      GoTo xt
-'    End Select
-'End Function
-
-Private Function ErrMsg(ByVal err_source As String, _
-               Optional ByVal err_no As Long = 0, _
-               Optional ByVal err_dscrptn As String = vbNullString, _
-               Optional ByVal err_line As Long = 0) As Variant
-' ------------------------------------------------------------------------------
-' Universal error message display service including a debugging option active
-' when the Conditional Compile Argument 'Debugging = 1' and an optional
-' additional "About the error:" section displaying text connected to an error
-' message by two vertical bars (||).
-'
-' A copy of this function is used in each procedure with an error handling
-' (On error Goto eh).
-'
-' The function considers the Common VBA Error Handling Component (ErH) which
-' may be installed (Conditional Compile Argument 'ErHComp = 1') and/or the
-' Common VBA Message Display Component (mMsg) installed (Conditional Compile
-' Argument 'MsgComp = 1'). Only when none of the two is installed the error
-' message is displayed by means of the VBA.MsgBox.
-'
-' Usage: Example with the Conditional Compile Argument 'Debugging = 1'
-'
-'        Private/Public <procedure-name>
-'            Const PROC = "<procedure-name>"
-'
-'            On Error Goto eh
-'            ....
-'        xt: Exit Sub/Function/Property
-'
-'        eh: Select Case ErrMsg(ErrSrc(PROC))
-'               Case vbResume:  Stop: Resume
-'               Case Else:      GoTo xt
-'            End Select
-'        End Sub/Function/Property
-'
-' Uses:
-' - AppErr For programmed application errors (Err.Raise AppErr(n), ....) the
-'          function is used to turn the positive number into a negative one.
-'          The error message will regard a negative error number as an
-'          'Application Error' and will use AppErr to turn it back for
-'          the message into its original positive number. Together with the
-'          ErrSrc there will be no need to maintain numerous different error
-'          numbers for a VB-Project.
-' - ErrSrc The caller provides the (name of the) source of the error through
-'          the module specific function ErrSrc(PROC) which adds the module
-'          name to the procedure name.
-'
-' W. Rauschenberger Berlin, May 2022
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When the Common VBA Error Handling Component (mErH) is installed in the
-    '~~ VB-Project (which includes the mMsg component) the mErh.ErrMsg service
-    '~~ is preferred since it provides some enhanced features like a path to the
-    '~~ error.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mErH.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#ElseIf MsgComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When only the Common Message Services Component (mMsg) is installed but
-    '~~ not the mErH component the mMsg.ErrMsg service is preferred since it
-    '~~ provides an enhanced layout and other features.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mMsg.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#End If
-    '~~ -------------------------------------------------------------------
-    '~~ When neither the mMsg nor the mErH component is installed the error
-    '~~ message is displayed by means of the VBA.MsgBox
-    '~~ -------------------------------------------------------------------
-    Dim ErrBttns    As Variant
-    Dim ErrAtLine   As String
-    Dim ErrDesc     As String
-    Dim ErrLine     As Long
-    Dim ErrNo       As Long
-    Dim ErrSrc      As String
-    Dim ErrText     As String
-    Dim ErrTitle    As String
-    Dim ErrType     As String
-    Dim ErrAbout    As String
-        
-    '~~ Obtain error information from the Err object for any argument not provided
-    If err_no = 0 Then err_no = Err.Number
-    If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.Source
-    If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
-    If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
-    
-    If InStr(err_dscrptn, "||") <> 0 Then
-        ErrDesc = Split(err_dscrptn, "||")(0)
-        ErrAbout = Split(err_dscrptn, "||")(1)
-    Else
-        ErrDesc = err_dscrptn
-    End If
-    
-    '~~ Determine the type of error
-    Select Case err_no
-        Case Is < 0
-            ErrNo = AppErr(err_no)
-            ErrType = "Application Error "
-        Case Else
-            ErrNo = err_no
-            If (InStr(1, err_dscrptn, "DAO") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC Teradata Driver") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC") <> 0 _
-            Or InStr(1, err_dscrptn, "Oracle") <> 0) _
-            Then ErrType = "Database Error " _
-            Else ErrType = "VB Runtime Error "
-    End Select
-    
-    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"   ' assemble ErrSrc from available information"
-    If err_line <> 0 Then ErrAtLine = " at line " & err_line                    ' assemble ErrAtLine from available information
-    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")         ' assemble ErrTitle from available information
-       
-    ErrText = "Error: " & vbLf & _
-              ErrDesc & vbLf & vbLf & _
-              "Source: " & vbLf & _
-              err_source & ErrAtLine
-    If ErrAbout <> vbNullString _
-    Then ErrText = ErrText & vbLf & vbLf & _
-                  "About: " & vbLf & _
-                  ErrAbout
-    
-#If Debugging Then
-    ErrBttns = vbYesNo
-    ErrText = ErrText & vbLf & vbLf & _
-              "Debugging:" & vbLf & _
-              "Yes    = Resume Error Line" & vbLf & _
-              "No     = Terminate"
-#Else
-    ErrBttns = vbCritical
-#End If
-    
-    ErrMsg = MsgBox(Title:=ErrTitle _
-                  , Prompt:=ErrText _
-                  , Buttons:=ErrBttns)
-xt: Exit Function
-
-End Function
-
-Private Sub BoP(ByVal b_proc As String, ParamArray b_arguments() As Variant)
-' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(P)rocedure named (b_proc). Procedure to be copied as Private
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
-' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ErHComp = 1 Then
-    mErH.BoP b_proc, s
-#ElseIf ExecTrace = 1 Then
-    mTrc.BoP b_proc, s
-#End If
-End Sub
-
-Private Sub EoP(ByVal e_proc As String, _
-      Optional ByVal e_inf As String = vbNullString)
-' ------------------------------------------------------------------------------
-' (E)nd-(o)f-(P)rocedure named (e_proc). Procedure to be copied as Private Sub
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    mErH.EoP e_proc
-#ElseIf ExecTrace = 1 Then
-    mTrc.EoP e_proc, e_inf
-#End If
-End Sub
 
 Public Sub Init()
     Set dctInstncsProcLocal = Nothing   ' All Procedure local declared class instances
@@ -368,7 +166,7 @@ Public Sub CollectInstncsProcLocal()
     Dim dctInstComp     As Dictionary
     Dim dctInstProc     As Dictionary
     
-    BoP ErrSrc(PROC)
+    mBasic.BoP ErrSrc(PROC)
     If dctInstncsProcLocal Is Nothing _
     Then Set dctInstncsProcLocal = New Dictionary
     
@@ -410,21 +208,21 @@ Public Sub CollectInstncsProcLocal()
             Wend
         
             If Not dctInstComp.Exists(sProc) And dctInstProc.Count <> 0 Then
-                AddAscByKey dctInstComp, sProc, dctInstProc
+                dctInstComp.Add sProc, dctInstProc
                 Set dctInstProc = Nothing
             End If
         Next vProc
     
         If Not dctInstncsProcLocal.Exists(sComp) And dctInstComp.Count <> 0 Then
-            AddAscByKey dctInstncsProcLocal, sComp, dctInstComp
+            dctInstncsProcLocal.Add sComp, dctInstComp
             Set dctInstComp = Nothing
         End If
     Next vComp
     
-xt: EoP ErrSrc(PROC)
+xt: mBasic.EoP ErrSrc(PROC)
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -435,8 +233,8 @@ Public Function IsInstance(ByVal i_comp_name As String, _
                            ByRef i_class_name As String, _
                   Optional ByVal i_proc_name As String = vbNullString) As Boolean
 ' ------------------------------------------------------------------------------
-' When the instance (i_instance_name) is a known Class instance the function
-' returns TRUE and the corresponding class' name (i_class_name)
+' Returns TRUE and the corresponding class' name (i_class_name) when the
+' instance (i_instance_name) is a known Class instance .
 ' ------------------------------------------------------------------------------
     Const PROC = "IsInstance"
     
@@ -503,7 +301,7 @@ Public Function IsInstance(ByVal i_comp_name As String, _
             
 xt: Exit Function
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
@@ -518,13 +316,13 @@ Public Property Get IsClassModule(Optional ByVal i_name As String, _
 End Property
 
 Public Property Let IsClassModule(Optional ByVal i_name As String, _
-                             Optional ByVal i_vbc As VBComponent, _
-                                      ByVal i_is As Boolean)
+                                  Optional ByVal i_vbc As VBComponent, _
+                                           ByVal i_is As Boolean)
                                             
     If dctClassModules Is Nothing Then Set dctClassModules = New Dictionary
     If i_is Then
         If Not dctClassModules.Exists(i_name) Then
-            AddAscByKey dctClassModules, i_name, i_vbc
+            dctClassModules.Add i_name, i_vbc
         End If
     End If
     

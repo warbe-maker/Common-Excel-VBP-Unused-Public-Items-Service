@@ -1,8 +1,8 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} fMsg 
    ClientHeight    =   14805
-   ClientLeft      =   150
-   ClientTop       =   390
+   ClientLeft      =   147
+   ClientTop       =   392
    ClientWidth     =   12390
    OleObjectBlob   =   "fMsg.frx":0000
 End
@@ -1447,7 +1447,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     
@@ -3157,28 +3157,28 @@ Private Sub SetupTextFont(ByVal ctl As MSForms.Control, _
 ' corresponding TypeMsgText type (kind_of_text).
 ' ------------------------------------------------------------------------------
 
-    Dim txt As TypeMsgText
-    txt = Me.Text(kind_of_text)
+    Dim Txt As TypeMsgText
+    Txt = Me.Text(kind_of_text)
     
     With ctl.Font
-        If .Bold <> txt.FontBold Then .Bold = txt.FontBold
-        If .Italic <> txt.FontItalic Then .Italic = txt.FontItalic
-        If .Underline <> txt.FontUnderline Then .Underline = txt.FontUnderline
-        If txt.MonoSpaced Then
+        If .Bold <> Txt.FontBold Then .Bold = Txt.FontBold
+        If .Italic <> Txt.FontItalic Then .Italic = Txt.FontItalic
+        If .Underline <> Txt.FontUnderline Then .Underline = Txt.FontUnderline
+        If Txt.MonoSpaced Then
             .name = DFLT_TXT_MONOSPACED_FONT_NAME
-            If txt.FontSize = 0 _
+            If Txt.FontSize = 0 _
             Then .Size = DFLT_TXT_MONOSPACED_FONT_SIZE _
-            Else .Size = txt.FontSize
+            Else .Size = Txt.FontSize
         Else
-            If txt.FontName = vbNullString _
+            If Txt.FontName = vbNullString _
             Then .name = DFLT_TXT_PROPSPACED_FONT_NAME _
-            Else .name = txt.FontName
-            If txt.FontSize = 0 _
+            Else .name = Txt.FontName
+            If Txt.FontSize = 0 _
             Then .Size = DFLT_TXT_PROPSPACED_FONT_SIZE _
-            Else .Size = txt.FontSize
+            Else .Size = Txt.FontSize
         End If
     End With
-    ctl.ForeColor = txt.FontColor
+    ctl.ForeColor = Txt.FontColor
     If bVisualizeForTest Then ctl.BackColor = VISLZE_BCKCLR_MSEC_TBX
 End Sub
 

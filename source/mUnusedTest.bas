@@ -15,7 +15,7 @@ Private Sub Test_UnusedPublic()
 ' ----------------------------------------------------------------
     Const PROC              As String = "Test_UnusedPublic"
     Const COMPS_EXCLUDED    As String = "clsQ,mRng,fMsg,mBasic,mDct,mErH,mFso,mMsg,mNme,mReg,mTrc,mWbk,mWsh"
-    Const LINES_EXCLUDED    As String = "Select Case ErrMsg(ErrSrc(PROC))" & vbCrLf & _
+    Const LINES_EXCLUDED    As String = "Select Case*ErrMsg(ErrSrc(PROC))" & vbCrLf & _
                                         "Case vbResume:*Stop:*Resume" & vbCrLf & _
                                         "Case Else:*GoTo xt"
         

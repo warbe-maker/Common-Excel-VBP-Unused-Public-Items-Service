@@ -2,19 +2,15 @@ Attribute VB_Name = "mCompManClient"
 Option Explicit
 ' ----------------------------------------------------------------------
 ' Standard Module mCompManClient
-' ------------------------------
-' Component to be imported into any Workbook in order to enbale it for
-' being serviced by CompMan. The component is the interface between a
-' the serviced Workbook/VB-Project and CompMan as the servicing Workbook
-' for the services:
-' - "Export Changed Components"
-' - "Update Outdated Common Components"
-' - "Synchronize VB-Projects"
+' ==============================
+' CompMan client interface. To be imported into any Workbook for being
+' serviced by CompMan's: - "Export Changed Components"
+'                        - "Update Outdated Common Components"
+'                        - "Synchronize VB-Projects"
 '
-' See also the public Github repo:
-' https://github.com/warbe-maker/Excel-VB-Components-Management-Services
+' W. Rauschenberger, Berlin Apr 2023
 '
-' W. Rauschenberger, Berlin Feb 2023
+' See https://github.com/warbe-maker/Excel-VB-Components-Management-Services
 ' ----------------------------------------------------------------------
 Public Const COMPMAN_DEVLP              As String = "CompMan.xlsb"
 Public Const SRVC_EXPORT_ALL            As String = "ExportAll"
@@ -193,7 +189,7 @@ Private Function ErrMsg(ByVal err_source As String, _
     '~~ Obtain error information from the Err object for any argument not provided
     If err_no = 0 Then err_no = Err.Number
     If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.source
+    If err_source = vbNullString Then err_source = Err.Source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
     

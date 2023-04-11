@@ -103,25 +103,27 @@ xt: ts.Close
     Set ts = Nothing
     Exit Property
     
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
 End Property
 
-Private Sub BoP(ByVal b_proc As String, ParamArray b_arguments() As Variant)
-' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(P)rocedure named (b_proc). Procedure to be copied as Private
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
-' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ErHComp = 1 Then
-    mErH.BoP b_proc, s
-#ElseIf ExecTrace = 1 Then
-    mTrc.BoP b_proc, s
-#End If
+Private Sub Initialize()
+
+    Set dctProcs = Nothing              ' All Procedures if non-excluded VBComponents
+    Set dctPublicItemsUsed = Nothing    ' All Public items used
+    Set dctPublicItemsUnique = Nothing  ' Collection of all those public items with a unique name
+    Set dctComps = Nothing              ' All bot excluded VBComponents
+    Set dctProcLines = Nothing          ' All component's procedures with theit start and end line
+    Set dctPublicItems = Nothing        ' All Public ... and Friend ... - finally only those unused
+    
+    sFile = vbNullString
+    Set dctPublicItems = New Dictionary
+    Set dctKindOfItem = New Dictionary
+    Set dctPublicItemsUnique = New Dictionary
+    Set dctProcLines = New Dictionary
+    
 End Sub
 
 Private Sub DisplayResult()
@@ -147,6 +149,8 @@ Private Sub DisplayResult()
     s = Align("Kind of Component.Item", lMaxCompProcKind, AlignCentered) & " " & Align("Public item (component.item)", lMaxLenItems, AlignCentered):    WriteToFile s
     s = String(lMaxCompProcKind, "-") & " " & String(lMaxLenItems, "-"):                                                                                WriteToFile s
     
+    KeySort dctPublicItems
+    
     For Each vPublic In dctPublicItems
         Set cll = dctPublicItems(vPublic)
         sComp = Split(vPublic, ".")(0)
@@ -165,10 +169,11 @@ Private Sub DisplayResult()
     s = "The following " & dctUsed.Count & " Public declared items had been found in at least one code line:":  WriteToFile s
     WriteToFile String(Len(s), "-")
     
+    KeySort dctUsed
     For Each vPublic In dctUsed
         Set cll = dctUsed(vPublic)
-        lMaxPublic = mPublic.Max(lMaxPublic, Len(vPublic))
-        lMaxUsing = mPublic.Max(lMaxUsing, Len(cll(5)))
+        lMaxPublic = mItems.Max(lMaxPublic, Len(vPublic))
+        lMaxUsing = mItems.Max(lMaxUsing, Len(cll(5)))
     Next vPublic
     
     WriteToFile Align("Public item", lMaxPublic, AlignLeft) & " " & Align("Used in (VBComponent.Procedure) by example", lMaxUsing + 2, AlignLeft) & "In code line"
@@ -181,163 +186,60 @@ Private Sub DisplayResult()
         WriteToFile Align(vPublic, lMaxPublic + 1, AlignLeft, , ".") & Align(cll(5), lMaxUsing + 1, AlignLeft, , ".") & ": " & cll(7)
     Next vPublic
 
-    OpenUrlEtc sFile, WIN_NORMAL
+    mBasic.ShellRun sFile, WIN_NORMAL
 
 End Sub
 
-Private Sub EoP(ByVal e_proc As String, _
-      Optional ByVal e_inf As String = vbNullString)
+Private Function KeySort(ByRef s_dct As Dictionary) As Dictionary
 ' ------------------------------------------------------------------------------
-' (E)nd-(o)f-(P)rocedure named (e_proc). Procedure to be copied as Private Sub
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
+' Returns the items in a Dictionary (s_dct) sorted by key.
 ' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    mErH.EoP e_proc
-#ElseIf ExecTrace = 1 Then
-    mTrc.EoP e_proc, e_inf
-#End If
-End Sub
-
-Private Function ErrMsg(ByVal err_source As String, _
-               Optional ByVal err_no As Long = 0, _
-               Optional ByVal err_dscrptn As String = vbNullString, _
-               Optional ByVal err_line As Long = 0) As Variant
-' ------------------------------------------------------------------------------
-' Universal error message display service including a debugging option active
-' when the Conditional Compile Argument 'Debugging = 1' and an optional
-' additional "About the error:" section displaying text connected to an error
-' message by two vertical bars (||).
-'
-' A copy of this function is used in each procedure with an error handling
-' (On error Goto eh).
-'
-' The function considers the Common VBA Error Handling Component (ErH) which
-' may be installed (Conditional Compile Argument 'ErHComp = 1') and/or the
-' Common VBA Message Display Component (mMsg) installed (Conditional Compile
-' Argument 'MsgComp = 1'). Only when none of the two is installed the error
-' message is displayed by means of the VBA.MsgBox.
-'
-' Usage: Example with the Conditional Compile Argument 'Debugging = 1'
-'
-'        Private/Public <procedure-name>
-'            Const PROC = "<procedure-name>"
-'
-'            On Error Goto eh
-'            ....
-'        xt: Exit Sub/Function/Property
-'
-'        eh: Select Case ErrMsg(ErrSrc(PROC))
-'               Case vbResume:  Stop: Resume
-'               Case Else:      GoTo xt
-'            End Select
-'        End Sub/Function/Property
-'
-' Uses:
-' - AppErr For programmed application errors (Err.Raise AppErr(n), ....) the
-'          function is used to turn the positive number into a negative one.
-'          The error message will regard a negative error number as an
-'          'Application Error' and will use AppErr to turn it back for
-'          the message into its original positive number. Together with the
-'          ErrSrc there will be no need to maintain numerous different error
-'          numbers for a VB-Project.
-' - ErrSrc The caller provides the (name of the) source of the error through
-'          the module specific function ErrSrc(PROC) which adds the module
-'          name to the procedure name.
-'
-' W. Rauschenberger Berlin, May 2022
-' ------------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When the Common VBA Error Handling Component (mErH) is installed in the
-    '~~ VB-Project (which includes the mMsg component) the mErh.ErrMsg service
-    '~~ is preferred since it provides some enhanced features like a path to the
-    '~~ error.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mErH.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#ElseIf MsgComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When only the Common Message Services Component (mMsg) is installed but
-    '~~ not the mErH component the mMsg.ErrMsg service is preferred since it
-    '~~ provides an enhanced layout and other features.
-    '~~ ------------------------------------------------------------------------
-    ErrMsg = mMsg.ErrMsg(err_source, err_no, err_dscrptn, err_line)
-    GoTo xt
-#End If
-    '~~ -------------------------------------------------------------------
-    '~~ When neither the mMsg nor the mErH component is installed the error
-    '~~ message is displayed by means of the VBA.MsgBox
-    '~~ -------------------------------------------------------------------
-    Dim ErrBttns    As Variant
-    Dim ErrAtLine   As String
-    Dim ErrDesc     As String
-    Dim ErrLine     As Long
-    Dim ErrNo       As Long
-    Dim ErrSrc      As String
-    Dim ErrText     As String
-    Dim ErrTitle    As String
-    Dim ErrType     As String
-    Dim ErrAbout    As String
+    Const PROC  As String = "KeySort"
+    
+    On Error GoTo eh
+    Dim dct     As New Dictionary
+    Dim vKey    As Variant
+    Dim arr()   As Variant
+    Dim Temp    As Variant
+    Dim Txt     As String
+    Dim i       As Long
+    Dim j       As Long
+    
+    If s_dct.Count = 0 Then GoTo xt
+    With s_dct
+        ReDim arr(0 To .Count - 1)
+        For i = 0 To .Count - 1
+            arr(i) = .Keys(i)
+        Next i
+    End With
+    
+    '~~ Bubble sort
+    For i = LBound(arr) To UBound(arr) - 1
+        For j = i + 1 To UBound(arr)
+            If arr(i) > arr(j) Then
+                Temp = arr(j)
+                arr(j) = arr(i)
+                arr(i) = Temp
+            End If
+        Next j
+    Next i
         
-    '~~ Obtain error information from the Err object for any argument not provided
-    If err_no = 0 Then err_no = Err.Number
-    If err_line = 0 Then ErrLine = Erl
-    If err_source = vbNullString Then err_source = Err.Source
-    If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
-    If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
+    '~~ Transfer based on sorted keys
+    For i = LBound(arr) To UBound(arr)
+        vKey = arr(i)
+        dct.Add key:=vKey, Item:=s_dct.Item(vKey)
+    Next i
     
-    If InStr(err_dscrptn, "||") <> 0 Then
-        ErrDesc = Split(err_dscrptn, "||")(0)
-        ErrAbout = Split(err_dscrptn, "||")(1)
-    Else
-        ErrDesc = err_dscrptn
-    End If
+    Set s_dct = dct
+    Set KeySort = dct
+    Set dct = Nothing
     
-    '~~ Determine the type of error
-    Select Case err_no
-        Case Is < 0
-            ErrNo = AppErr(err_no)
-            ErrType = "Application Error "
-        Case Else
-            ErrNo = err_no
-            If (InStr(1, err_dscrptn, "DAO") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC Teradata Driver") <> 0 _
-            Or InStr(1, err_dscrptn, "ODBC") <> 0 _
-            Or InStr(1, err_dscrptn, "Oracle") <> 0) _
-            Then ErrType = "Database Error " _
-            Else ErrType = "VB Runtime Error "
-    End Select
-    
-    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"   ' assemble ErrSrc from available information"
-    If err_line <> 0 Then ErrAtLine = " at line " & err_line                    ' assemble ErrAtLine from available information
-    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")         ' assemble ErrTitle from available information
-       
-    ErrText = "Error: " & vbLf & _
-              ErrDesc & vbLf & vbLf & _
-              "Source: " & vbLf & _
-              err_source & ErrAtLine
-    If ErrAbout <> vbNullString _
-    Then ErrText = ErrText & vbLf & vbLf & _
-                  "About: " & vbLf & _
-                  ErrAbout
-    
-#If Debugging Then
-    ErrBttns = vbYesNo
-    ErrText = ErrText & vbLf & vbLf & _
-              "Debugging:" & vbLf & _
-              "Yes    = Resume Error Line" & vbLf & _
-              "No     = Terminate"
-#Else
-    ErrBttns = vbCritical
-#End If
-    
-    ErrMsg = MsgBox(Title:=ErrTitle _
-                  , Prompt:=ErrText _
-                  , Buttons:=ErrBttns)
 xt: Exit Function
 
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
 End Function
 
 Private Function ErrSrc(ByVal e_proc As String) As String
@@ -368,7 +270,7 @@ Private Function MaxKindOfComp() As Long
     Dim en  As enKindOfComponent
     
     For en = enKindOfComponent.enA To enKindOfComponent.enZ
-        MaxKindOfComp = mPublic.Max(MaxKindOfComp, Len(KindOfComponent(en)))
+        MaxKindOfComp = mItems.Max(MaxKindOfComp, Len(KindOfComponent(en)))
     Next en
     
 End Function
@@ -377,7 +279,7 @@ Private Function MaxKindOfItem() As Long
     Dim en  As enKindOfItem
     
     For en = enKindOfItem.enA To enKindOfItem.enZ
-        MaxKindOfItem = mPublic.Max(MaxKindOfItem, Len(KindOfItem(en)))
+        MaxKindOfItem = mItems.Max(MaxKindOfItem, Len(KindOfItem(en)))
     Next en
     
 End Function
@@ -385,54 +287,54 @@ End Function
 Private Function MaxLenItems(ByVal dct As Dictionary) As Long
     Dim v As Variant
     For Each v In dct
-        MaxLenItems = mPublic.Max(MaxLenItems, Len(v))
+        MaxLenItems = mItems.Max(MaxLenItems, Len(v))
     Next v
 End Function
 
-Private Function OpenUrlEtc(ByVal oue_string As String, _
-                            ByVal oue_show_how As Long) As String
-' ----------------------------------------------------------------------------
-' Opens a folder, email-app, url, or even an Access instance.
+'Private Function OpenUrlEtc(ByVal oue_string As String, _
+'                            ByVal oue_show_how As Long) As String
+'' ----------------------------------------------------------------------------
+'' Opens a folder, email-app, url, or even an Access instance.
+''
+'' Usage Examples
+'' - Open a folder:          OpenUrlEtc("C:\TEMP\",WIN_NORMAL)
+'' - Call Email app:         OpenUrlEtc("mailto:dash10@hotmail.com",WIN_NORMAL)
+'' - Open URL:               OpenUrlEtc("http://home.att.net/~dashish", WIN_NORMAL)
+'' - Handle Unknown extensions (call Open With Dialog):
+''                           OpenUrlEtc("C:\TEMP\TestThis",Win_Normal)
+'' - Start Access instance:  OpenUrlEtc("I:\mdbs\CodeNStuff.mdb", Win_NORMAL)
+''
+'' Copyright:
+'' This code was originally written by Dev Ashish. It is not to be altered or
+'' distributed, except as part of an application. You are free to use it in any
+'' application, provided the copyright notice is left unchanged.
+''
+'' Code Courtesy of: Dev Ashish
+'' ----------------------------------------------------------------------------
 '
-' Usage Examples
-' - Open a folder:          OpenUrlEtc("C:\TEMP\",WIN_NORMAL)
-' - Call Email app:         OpenUrlEtc("mailto:dash10@hotmail.com",WIN_NORMAL)
-' - Open URL:               OpenUrlEtc("http://home.att.net/~dashish", WIN_NORMAL)
-' - Handle Unknown extensions (call Open With Dialog):
-'                           OpenUrlEtc("C:\TEMP\TestThis",Win_Normal)
-' - Start Access instance:  OpenUrlEtc("I:\mdbs\CodeNStuff.mdb", Win_NORMAL)
+'    Dim lRet            As Long
+'    Dim varTaskID       As Variant
+'    Dim stRet           As String
+'    Dim hWndAccessApp   As Long
 '
-' Copyright:
-' This code was originally written by Dev Ashish. It is not to be altered or
-' distributed, except as part of an application. You are free to use it in any
-' application, provided the copyright notice is left unchanged.
+'    '~~ First try ShellExecute
+'    lRet = apiShellExecute(hWndAccessApp, vbNullString, oue_string, vbNullString, vbNullString, oue_show_how)
 '
-' Code Courtesy of: Dev Ashish
-' ----------------------------------------------------------------------------
-
-    Dim lRet            As Long
-    Dim varTaskID       As Variant
-    Dim stRet           As String
-    Dim hWndAccessApp   As Long
-    
-    '~~ First try ShellExecute
-    lRet = apiShellExecute(hWndAccessApp, vbNullString, oue_string, vbNullString, vbNullString, oue_show_how)
-    
-    Select Case True
-        Case lRet = ERROR_OUT_OF_MEM:       stRet = "Error: Out of Memory/Resources. Couldn't Execute!"
-        Case lRet = ERROR_FILE_NOT_FOUND:   stRet = "Error: File not found.  Couldn't Execute!"
-        Case lRet = ERROR_PATH_NOT_FOUND:   stRet = "Error: Path not found. Couldn't Execute!"
-        Case lRet = ERROR_BAD_FORMAT:       stRet = "Error:  Bad File Format. Couldn't Execute!"
-        Case lRet = ERROR_NO_ASSOC          ' Try the OpenWith dialog
-            varTaskID = Shell("rundll32.exe shell32.dll,OpenAs_RunDLL " & oue_string, WIN_NORMAL)
-            lRet = (varTaskID <> 0)
-        Case lRet > ERROR_SUCCESS:         lRet = -1
-    End Select
-    
-    OpenUrlEtc = lRet & IIf(stRet = vbNullString, vbNullString, ", " & stRet)
-
-End Function
-
+'    Select Case True
+'        Case lRet = ERROR_OUT_OF_MEM:       stRet = "Error: Out of Memory/Resources. Couldn't Execute!"
+'        Case lRet = ERROR_FILE_NOT_FOUND:   stRet = "Error: File not found.  Couldn't Execute!"
+'        Case lRet = ERROR_PATH_NOT_FOUND:   stRet = "Error: Path not found. Couldn't Execute!"
+'        Case lRet = ERROR_BAD_FORMAT:       stRet = "Error:  Bad File Format. Couldn't Execute!"
+'        Case lRet = ERROR_NO_ASSOC          ' Try the OpenWith dialog
+'            varTaskID = Shell("rundll32.exe shell32.dll,OpenAs_RunDLL " & oue_string, WIN_NORMAL)
+'            lRet = (varTaskID <> 0)
+'        Case lRet > ERROR_SUCCESS:         lRet = -1
+'    End Select
+'
+'    OpenUrlEtc = lRet & IIf(stRet = vbNullString, vbNullString, ", " & stRet)
+'
+'End Function
+'
 Private Sub ProvisionOfExcludedCodelines(Optional ByVal p_excluded As String = vbNullString)
     Dim sSplit As String
     
@@ -498,7 +400,7 @@ Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
     Const PROC  As String = "Unused"
     
     On Error GoTo eh
-    BoP ErrSrc(PROC)
+    mBasic.BoP ErrSrc(PROC)
     
     ProvisionOfTheServicedWorkbook u_wbk:   If wbkServiced Is Nothing Then GoTo xt
     
@@ -506,14 +408,22 @@ Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
     
     ProvisionOfExcludedCodelines u_excluded_code_lines
     
-    mPublic.PublicItemsUsageCollect
+    Initialize
+    mComps.Collect Excluded
+    mProc.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
+    mClass.CollectInstncsVBPGlobal  ' Collect all class instance which are VB-Project global
+    mClass.CollectInstncsCompGlobal ' Collect all class instances which are ComponenKoItemt global
+    mClass.CollectInstncsProcLocal  ' Collect all class instances in Procedures
+    CollectOnActions
+    mItems.CollectPublicItems
+    mItems.CollectPublicUsage
     
     DisplayResult
     
-xt: EoP ErrSrc(PROC)
+xt: mBasic.EoP ErrSrc(PROC)
     Exit Sub
 
-eh: Select Case ErrMsg(ErrSrc(PROC))
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select

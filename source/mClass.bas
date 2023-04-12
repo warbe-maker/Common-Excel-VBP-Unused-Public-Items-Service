@@ -1,5 +1,16 @@
 Attribute VB_Name = "mClass"
 Option Explicit
+' ------------------------------------------------------------------------------------
+' Standard Module mClass: Collection and checks for Class Modules and Class Instances.
+' =======================
+' Public services:
+' - CollectInstncsCompGlobal    Collection of Component global Class instances
+' - CollectInstncsVBPGlobal     Collection of Project global Class instances
+' - CollectInstncsProcLocal     Collection of Procedure local Class instances
+' - IsInstance                  Check if a string is known as a Class instance
+' - IsClassModule Get           Check if a Name is the Name of a Class Module
+'                 Let           Register a Name is the Name of a Class Module
+' ------------------------------------------------------------------------------------
 
 Private dctInstncsProcLocal     As Dictionary ' collection of Procedure local declared class instances
 Private dctInstncsCompGlobal    As Dictionary ' collection of VBComponent class instances
@@ -43,7 +54,7 @@ Public Sub CollectInstncsCompGlobal()
         While i <= vbcm.CountOfDeclarationLines
             sLine = mLine.NextLine(vbcm, i, lStartsAt)
             lStopLoop = 0
-            While mLine.DeclaresInstanceGlobal(sLine, sItem, sAs)
+            While mLine.DeclaresGlobalClassInstance(sLine, sItem, sAs)
                 lStopLoop = lStopLoop + 1
                 If lStopLoop > 50 Then Stop
                 If mClass.IsClassModule(sAs) Then
@@ -70,7 +81,6 @@ eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case Else:      GoTo xt
     End Select
 End Sub
-
                                             
 Public Sub CollectInstncsVBPGlobal()
     
@@ -135,11 +145,6 @@ Private Function ErrSrc(ByVal e_proc As String) As String
     ErrSrc = "mClass" & "." & e_proc
 End Function
 
-Public Sub Init()
-    Set dctInstncsProcLocal = Nothing   ' All Procedure local declared class instances
-    Set dctInstncsCompGlobal = Nothing  ' All VBComponent global declared class instances
-End Sub
-
 Public Sub CollectInstncsProcLocal()
 ' ------------------------------------------------------------------------------------
 ' Collects for all collected procedures (dctProcs) the local Class Instances in
@@ -167,9 +172,7 @@ Public Sub CollectInstncsProcLocal()
     Dim dctInstProc     As Dictionary
     
     mBasic.BoP ErrSrc(PROC)
-    If dctInstncsProcLocal Is Nothing _
-    Then Set dctInstncsProcLocal = New Dictionary
-    
+    Set dctInstncsProcLocal = New Dictionary
     For Each vComp In dctProcs
         Set dctInstComp = New Dictionary
         sComp = vComp
@@ -177,9 +180,9 @@ Public Sub CollectInstncsProcLocal()
         For Each vProc In dctCompProcs
             sProc = vProc
             Set cllProc = dctCompProcs(vProc)
-            Set vbcm = mProc.CollVBCM(cllProc)
-            lFrom = mProc.CollLineFrom(cllProc)
-            lTo = mProc.CollLineTo(cllProc)
+            Set vbcm = mProcs.CollVBCM(cllProc)
+            lFrom = mProcs.CollLineFrom(cllProc)
+            lTo = mProcs.CollLineTo(cllProc)
             Set cllProc = Nothing
             Set dctInstProc = New Dictionary
             i = lFrom - 1
@@ -201,7 +204,6 @@ Public Sub CollectInstncsProcLocal()
                             If Not dctInstProc.Exists(sItem) Then
                                 dctInstProc.Add sItem, sAs
                             End If
-'                            Debug.Print "Local instance '" & sItem & "' of Class '" & sAs & "' (" & sLine & ")"
                         End If
                 End Select
                 sLine = mLine.NextLine(vbcm, i, lStartsAt)

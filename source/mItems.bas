@@ -1,20 +1,24 @@
 Attribute VB_Name = "mItems"
 Option Explicit
 ' ----------------------------------------------------------------------------
-' Standard Module mItems
+' Standard Module mItems:
 ' =======================
 ' Public services:
-' - AddAscByKey Adds items to a Dictionary instantly oredered by key.
-' - Collect     Collects (in Dictionary with comp-name.item-name as key):
-'               1. All those VBComponen not explicitely excluded
-'               1.1 All Class Modules
-'               2. All items declared Public
-'               3. All public item's Kind
-'               4. All public items indicating unique True or False
-'               5. All VBComponent's Procedures with their start and end line
-' -
+' - CollectOnActions
+' - CollectPublicItems  Collects of not excluded VBComponents:
+'                       - Any VBCpmponent which is a Class Module
+'                       - Any item (Sub Function, Property) declared Public
+'                       - Any public item's Kind
+'                       - All public items with the same name
+'                       - All Procedures start and end line
+' - CollectPublicUsage
+' - ItemAs
+' - KindOfComponent
+' - KindOfItem
+' - KoPstring
+' - Variable
 '
-' W. Rauschenberger
+' W. Rauschenberger, Berlin Apr 2023
 ' ----------------------------------------------------------------------------
 Public Terminated As Boolean
 
@@ -88,6 +92,7 @@ Public dctPublicItems           As Dictionary   ' All Public ... and Friend ... 
 Public dctUsed                  As Dictionary
 Public dctUnused                As Dictionary
 Public sFile                    As String
+
                              
 Private Function Align(ByVal align_s As String, _
                        ByVal align_lngth As Long, _
@@ -133,66 +138,6 @@ Private Function AppErr(ByVal app_err_no As Long) As Long
     If app_err_no >= 0 Then AppErr = app_err_no + vbObjectError Else AppErr = Abs(app_err_no - vbObjectError)
 End Function
 
-Public Sub CollectPublicItems()
-' ------------------------------------------------------------------------------
-' Collects (in Dictionary with comp-name.item-name as key):
-' 1. All those VBComponenKoItemts not explicitely excluded (dctComponenKoItemts)
-'    1.1 All Class Modules (dctClassModules)
-' 2. All items declared Public (dctPublicItems)
-' 3. All public item's Kind (dctKindOfItem)
-' 4. All public items indicating unique True or False (dctPublicItemsUnique)
-' 5. All VBComponenKoItemt's Procedures with their start and enKoItemd line (dctProcLines)
-' ------------------------------------------------------------------------------
-    Const PROC  As String = "CollectPublicItems"
-    
-    On Error GoTo eh
-    Dim cllComp         As Collection
-    Dim cllProc         As Collection
-    Dim i               As Long
-    Dim sAs             As String
-    Dim sComp           As String
-    Dim sItem           As String
-    Dim sLine           As String
-    Dim sProc           As String
-    Dim vComp           As Variant
-    Dim vbc             As VBComponent
-    Dim vbcm            As CodeModule
-    Dim dctCompProcs    As Dictionary
-    Dim vProc           As Variant
-    Dim enKoItem        As enKindOfItem
-    Dim enKoComp        As enKindOfComponent
-    
-    mBasic.BoP ErrSrc(PROC)
-    
-    '~~ Collect Public declared Sub, Function, Property
-    For Each vComp In dctComps
-        sComp = vComp
-        Set cllComp = dctComps(sComp)
-        Set vbc = CompCollVBC(cllComp)
-        enKoComp = CompCollKind(cllComp)
-        Set vbcm = vbc.CodeModule
-        
-        Set dctCompProcs = dctProcs(sComp)
-        For Each vProc In dctCompProcs
-            sProc = vProc
-            Set cllProc = dctCompProcs(vProc)
-            sLine = mProc.CollLine(cllProc)
-            i = mProc.CollLineFrom(cllProc)
-            If mLine.DeclaresPublicItem(i, sLine, sItem, sAs, vbcm, enKoComp, enKoItem) Then
-                CollectPublicItem sComp, sItem, i, sLine, enKoComp, enKoItem
-            End If
-        Next vProc
-    Next vComp
-        
-xt: mBasic.EoP ErrSrc(PROC)
-    Exit Sub
-
-eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
-        Case vbResume:  Stop: Resume
-        Case Else:      GoTo xt
-    End Select
-End Sub
-
 Public Sub CollectOnActions()
 ' ------------------------------------------------------------------------------------
 ' Collects all OnActions (which must be Public items) in a Dictionary (dctOnActions)
@@ -222,92 +167,6 @@ Public Sub CollectOnActions()
     Set dctOnActions = dct
     Set dct = Nothing
     
-End Sub
-
-Public Function CompCollKind(ByVal cll As Collection) As enKindOfComponent:    CompCollKind = cll(2):  End Function
-
-Public Function CompCollVBC(ByVal cll As Collection) As VBComponent:   Set CompCollVBC = cll(1):   End Function
-
-Private Function ErrSrc(ByVal e_proc As String) As String
-    ErrSrc = "mItems" & "." & e_proc
-End Function
-
-Public Function IsSheetDocMod(ByVal i_vbc As VBComponent, _
-                              ByVal i_wbk As Workbook, _
-                     Optional ByRef i_wsh As Worksheet) As Boolean
-' ------------------------------------------------------------------------------
-' When the VBComponent (vbc) represents a Worksheet the function returns TRUE
-' and the corresponding Worksheet (i_wsh).
-' ------------------------------------------------------------------------------
-    Dim wsh As Worksheet
-
-    IsSheetDocMod = i_vbc.Type = vbext_ct_Document And i_vbc.name <> i_wbk.CodeName
-    If IsSheetDocMod Then
-'        Debug.Print "i_vbc.Name: " & i_vbc.name
-        For Each wsh In i_wbk.Worksheets
-'            Debug.Print "wsh.CodeName: " & wsh.CodeName
-            If wsh.CodeName = i_vbc.name Then
-                Set i_wsh = wsh
-                Exit For
-            End If
-        Next wsh
-    End If
-
-End Function
-
-Public Function IsUniqueItem(ByVal i_item As String) As Boolean
-    If dctPublicItemsUnique.Exists(i_item) Then
-        IsUniqueItem = dctPublicItemsUnique(i_item).Count = 1
-    Else
-'        Debug.Print "The procedure named '" & i_item & "' is a procedure name in more than one VBComponent!"
-    End If
-    
-End Function
-
-Public Sub Item(ByVal c_public As String, _
-                ByVal c_line As String, _
-                ByRef c_item As String)
-' ------------------------------------------------------------------------------------
-' Returns the name of the Public (c_public) as the public item (c_item).
-' ------------------------------------------------------------------------------------
-    Const PROC = "Item"
-                       
-    On Error GoTo eh
-    c_item = Trim(Split(c_line, c_public)(1))
-    c_item = Trim(Split(c_item, " ")(0))
-    c_item = Trim(Split(c_item, "(")(0))
-    If c_item = vbNullString Then Stop
-    
-xt: Exit Sub
-
-eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
-        Case vbResume:  Stop: Resume
-        Case Else:      GoTo xt
-    End Select
-End Sub
-
-Public Sub DeclaredAs(ByVal c_line As String, _
-                      ByRef c_as As String)
-' ------------------------------------------------------------------------------------
-' Returns from the code line (c_line) the Public " As " (c_as).
-' ------------------------------------------------------------------------------------
-    Const PROC = "DeclaredAs"
-                       
-    On Error GoTo eh
-    Select Case True
-        Case c_line Like "*) As New *": c_as = Split(c_line, ") As New ")(1)
-        Case c_line Like "*) As *":     c_as = Split(Split(c_line, ") As ")(1), " ")(0)
-        Case c_line Like "* As New *":  c_as = Split(c_line, " As New ")(1)
-        Case c_line Like "* As *":      c_as = Split(Split(c_line, " As ")(1), " ")(0)
-    End Select
-    If c_as = vbNullString Then Stop
-    
-xt: Exit Sub
-
-eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
-        Case vbResume:  Stop: Resume
-        Case Else:      GoTo xt
-    End Select
 End Sub
 
 Public Sub CollectPublicItem(ByVal c_comp As String, _
@@ -354,99 +213,65 @@ Public Sub CollectPublicItem(ByVal c_comp As String, _
 
 End Sub
 
-Public Function KoPstring(ByVal k_kop As vbext_ProcKind) As String
-    Select Case k_kop
-        Case vbext_pk_Get:  KoPstring = "Get"
-        Case vbext_pk_Let:  KoPstring = "Let"
-        Case vbext_pk_Proc: KoPstring = "Proc"
-        Case vbext_pk_Set:  KoPstring = "Set"
-    End Select
-End Function
-
-Public Function Max(ParamArray va() As Variant) As Variant
-' --------------------------------------------------------
-' Returns the maximum value of all values provided (va).
-' --------------------------------------------------------
-    Dim v As Variant
+Public Sub CollectPublicItems()
+' ------------------------------------------------------------------------------
+' Collects in dctPublicItems (with comp-name.item-name as key) of not excluded
+' VBComponents(dctComps):
+' - In dctClassModules any VBCpmponent which is a Class Module
+' - In dctPublicItems any item (Sub Function, Property) declared Public
+' - In dctKindOfItem any public item's Kind
+' - In dctPublicItemsUnique all public items with the same name
+' - In dctProcLines all Procedures start and end line
+' ------------------------------------------------------------------------------
+    Const PROC  As String = "CollectPublicItems"
     
-    Max = va(LBound(va)): If LBound(va) = UBound(va) Then Exit Function
-    For Each v In va
-        If v > Max Then Max = v
-    Next v
-    
-End Function
-
-Public Sub ItemAs(ByVal c_public As String, _
-                  ByVal c_line As String, _
-                  ByRef c_item As String, _
-                  ByRef c_as As String)
-' ------------------------------------------------------------------------------------
-' Returns the name of the Public (c_public) as the public item (c_item).
-' ------------------------------------------------------------------------------------
-    Const PROC = "ItemAs"
-                       
     On Error GoTo eh
-    Item c_public, c_line, c_item
-    If c_item = vbNullString Then Stop
+    Dim cllComp         As Collection
+    Dim cllProc         As Collection
+    Dim i               As Long
+    Dim sAs             As String
+    Dim sComp           As String
+    Dim sItem           As String
+    Dim sLine           As String
+    Dim sProc           As String
+    Dim vComp           As Variant
+    Dim vbc             As VBComponent
+    Dim vbcm            As CodeModule
+    Dim dctCompProcs    As Dictionary
+    Dim vProc           As Variant
+    Dim enKoItem        As enKindOfItem
+    Dim enKoComp        As enKindOfComponent
     
-    DeclaredAs c_line, c_as
-    If c_as = vbNullString Then Stop
+    mBasic.BoP ErrSrc(PROC)
     
-xt: Exit Sub
+    '~~ Collect Public declared Sub, Function, Property
+    For Each vComp In dctComps
+        sComp = vComp
+        Set cllComp = dctComps(sComp)
+        Set vbc = CompCollVBC(cllComp)
+        enKoComp = CompCollKind(cllComp)
+        Set vbcm = vbc.CodeModule
+        
+        Set dctCompProcs = dctProcs(sComp)
+        For Each vProc In dctCompProcs
+            sProc = vProc
+            Set cllProc = dctCompProcs(vProc)
+            sLine = mProcs.CollLine(cllProc)
+            i = mProcs.CollLineFrom(cllProc)
+            If mLine.DeclaresPublicItem(i, sLine, sItem, sAs, vbcm, enKoComp, enKoItem) Then
+                CollectPublicItem sComp, sItem, i, sLine, enKoComp, enKoItem
+            End If
+        Next vProc
+    Next vComp
+        
+xt: mBasic.EoP ErrSrc(PROC)
+    Exit Sub
 
 eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume
         Case Else:      GoTo xt
     End Select
 End Sub
-
-Private Function PublicItemCollCodeLine(ByVal cll As Collection) As String:                 PublicItemCollCodeLine = cll(4):                                                        End Function
-
-Private Function PublicItemCollCodeLineNo(ByVal cll As Collection) As String:               PublicItemCollCodeLineNo = cll(3):                                                      End Function
-
-Private Function PublicItemCollInCodeLine(ByVal cll As Collection) As String:               PublicItemCollInCodeLine = cll(9):                                                      End Function
-
-Private Function PublicItemCollInCodeLineNo(ByVal cll As Collection) As String:             PublicItemCollInCodeLineNo = cll(8):                                                    End Function
-
-Private Function PublicItemCollInKindOfComp(ByVal cll As Collection) As enKindOfComponent:  PublicItemCollInKindOfComp = cll(6):                                                    End Function
-
-Private Function PublicItemCollInKindOfCompItem(ByVal cll As Collection) As String:         PublicItemCollInKindOfCompItem = KindOfComponent(cll(6)) & "." & KindOfItem(cll(7)):    End Function
-
-Private Function PublicItemCollInKindOfItem(ByVal cll As Collection) As enKindOfItem:       PublicItemCollInKindOfItem = cll(7):                                                    End Function
-
-Private Function PublicItemCollKindOfComp(ByVal cll As Collection) As enKindOfComponent:    PublicItemCollKindOfComp = cll(1):                                                      End Function
-
-Public Function PublicItemCollKindOfCompItem(ByVal cll As Collection) As String:            PublicItemCollKindOfCompItem = KindOfComponent(cll(1)) & "." & KindOfItem(cll(2)):      End Function
-
-Private Function PublicItemCollKindOfItem(ByVal cll As Collection) As enKindOfItem:         PublicItemCollKindOfItem = cll(2):                                                      End Function
-
-Public Function KindOfComponent(ByVal en As enKindOfComponent) As String
-    Select Case en
-        Case enStandardModule:  KindOfComponent = "Standard-Module"
-        Case enClassModule:     KindOfComponent = "Class-Module"
-        Case enWorkbook:        KindOfComponent = "Workbook"
-        Case enWorksheet:       KindOfComponent = "WorkSheet"
-        Case enUserForm:        KindOfComponent = "UserForm"
-    End Select
-End Function
-
-Public Function KindOfItem(ByVal en As enKindOfItem) As String
-
-    Select Case en
-        Case enClassInstance:   KindOfItem = "Class-Instance"
-        Case enConstant:        KindOfItem = "Constant"
-        Case enEnumeration:     KindOfItem = "Enumeration"
-        Case enFunction:        KindOfItem = "Function"
-        Case enMethod:          KindOfItem = "Method"
-        Case enPropertyGet:     KindOfItem = "Property-Get"
-        Case enPropertyLet:     KindOfItem = "Property-Let"
-        Case enPropertySet:     KindOfItem = "Property-Set"
-        Case enSub:             KindOfItem = "Sub-Procedure"
-        Case enUserDefinedType: KindOfItem = "User-Defined-Type"
-        Case enVariable:        KindOfItem = "Variable"
-    End Select
-    
-End Function
 
 Public Sub CollectPublicUsage()
 ' ------------------------------------------------------------------------------------
@@ -498,10 +323,10 @@ Public Sub CollectPublicUsage()
             lProcs = lProcs + 1
             sProcParsed = vProc
             Set cllProc = dctCompProcs(vProc)
-            Set vbcm = mProc.CollVBCM(cllProc)
-            sLineProc = mProc.CollLine(cllProc)
-            lFrom = mProc.CollLineFrom(cllProc)
-            lTo = mProc.CollLineTo(cllProc)
+            Set vbcm = mProcs.CollVBCM(cllProc)
+            sLineProc = mProcs.CollLine(cllProc)
+            lFrom = mProcs.CollLineFrom(cllProc)
+            lTo = mProcs.CollLineTo(cllProc)
 '            If sCompParsed = "mExport" And sProcParsed = "All" Then Stop
             i = lFrom - 1
             sLineProc = mLine.NextLine(vbcm, i, lStartsAt)
@@ -517,7 +342,7 @@ Public Sub CollectPublicUsage()
                     Case sLineProc Like "With *End With":   lLinesSkipped = lLinesSkipped + 1
                     Case sLineProc Like "With *"
                         PushInstanceOnWithStack sCompParsed, sProcParsed, sLineProc
-                    Case sLineProc Like "End With":         mWithStack.Pop
+                    Case sLineProc Like "End With":         mStack.Pop
                     Case sLineProc = "End Sub":             lLinesSkipped = lLinesSkipped + 1:  sIgnore = vbNullString
                     Case sLineProc = "End Function":        lLinesSkipped = lLinesSkipped + 1:  sIgnore = vbNullString
                     Case sLineProc = "Exit Sub":            lLinesSkipped = lLinesSkipped + 1
@@ -541,26 +366,28 @@ Public Sub CollectPublicUsage()
                             sCompPublic = Split(vPublic, ".")(0)
                             sItemPublic = Split(vPublic, ".")(1)
                             '~~ Immediately skip the public item when it is not found in the sLineToParse
-                            If InStr(sLineToParse, sItemPublic) = 0 Then GoTo nxp
-                            '~~ Skip the public item when the to-be-parsed component is identical with the public item's component
-                            If sCompParsed = sCompPublic Then GoTo nxp ' no need to explore the own module
-                            
-                            If mLine.RefersToPublicItem(sLineToParse, vPublic, vbcm.Parent, sClass) Then
-                                '~~ Move the found public item to the dctUsed dictionary
-                                If Not dctUsed.Exists(vPublic) Then
-                                    Set cllUsed = dctPublicItems(vPublic)
-                                    cllUsed.Add sCompParsed & "." & sProcParsed   ' comp.proc where the public item was found
-                                    cllUsed.Add lStartsAt                           ' code line number where the public item was found
-                                    cllUsed.Add sLineProc                           ' code line where the public item was found
-                                    dctUsed.Add vPublic, cllUsed
-                                End If
-                                '~~ Remove the found public item
-                                If dctPublicItems.Exists(vPublic) Then dctPublicItems.Remove (vPublic)
-                                GoTo nxp
-                            End If
-                            
-nxp:                    Next vPublic
+                            If InStr(sLineToParse, sItemPublic) <> 0 Then
+                                '~~ Skip the public item when the to-be-parsed component is identical with the public item's component
+                                If sCompParsed <> sCompPublic Then ' no need to explore the own module
+                                
+                                    If mLine.RefersToPublicItem(sLineToParse, vPublic, vbcm.Parent, sClass) Then
+                                        '~~ Move the found public item to the dctUsed dictionary
+                                        If Not dctUsed.Exists(vPublic) Then
+                                            Set cllUsed = dctPublicItems(vPublic)
+                                            cllUsed.Add sCompParsed & "." & sProcParsed ' comp.proc where the public item was found
+                                            cllUsed.Add lStartsAt                       ' code line number where the public item was found
+                                            cllUsed.Add sLineProc                       ' code line where the public item was found
+                                            dctUsed.Add vPublic, cllUsed
+                                            Application.StatusBar = Progress(lProcs, lProcsTotal, lLinesAnalysed, lLinesSkipped)
+                                        End If
+                                        '~~ Remove the found public item
+                                        If dctPublicItems.Exists(vPublic) Then dctPublicItems.Remove (vPublic)
+                                    End If
+                                End If ' sCompParsed <> sCompPublic
+                            End If ' public item found in line
+                        Next vPublic
 
+                        '~~ Collect all Public items in OnActions
                         For Each vPublic In dctPublicItems
                             Set cllUsed = dctPublicItems(vPublic)
                             If dctOnActions.Exists(vPublic) Then
@@ -575,13 +402,11 @@ nxp:                    Next vPublic
                         Next vPublic
                 End Select
                 Application.UseSystemSeparators = True
-                Application.StatusBar = "Analysed: " & Format(lProcs, "#,000") & " (of " & Format(lProcsTotal, "#,000") & ") Procedures, " & _
-                                        Format(lLinesAnalysed, "#0,000") & " Lines analysed, " & Format(lLinesSkipped, "#0,000") & " Lines skipped."
                 sLineProc = mLine.NextLine(vbcm, i, lStartsAt)
             Wend
         Next vProc
 nxt: Next vComp
-    
+    Application.StatusBar = Progress(lProcs, lProcsTotal, lLinesAnalysed, lLinesSkipped)
     For Each v In dctUsed
         If dctPublicItems.Exists(v) Then
             dctPublicItems.Remove v
@@ -601,19 +426,101 @@ eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
     End Select
 End Sub
 
-Public Sub Variable(ByVal c_public As String, _
-                    ByVal c_line As String, _
-                    ByRef c_item As String, _
-                    ByRef c_as As String)
+Public Function CompCollKind(ByVal cll As Collection) As enKindOfComponent:    CompCollKind = cll(2):  End Function
+
+Public Function CompCollVBC(ByVal cll As Collection) As VBComponent:   Set CompCollVBC = cll(1):   End Function
+
+Public Sub DeclaredAs(ByVal c_line As String, _
+                      ByRef c_as As String)
 ' ------------------------------------------------------------------------------------
-' Returns the name of the code line (c_line) the public declared item (c_item) and its
-' As declaration (c_as).
+' Returns from the code line (c_line) the Public " As " (c_as).
 ' ------------------------------------------------------------------------------------
-    Const PROC = "Variable"
+    Const PROC = "DeclaredAs"
+                       
+    On Error GoTo eh
+    Select Case True
+        Case c_line Like "*) As New *": c_as = Split(c_line, ") As New ")(1)
+        Case c_line Like "*) As *":     c_as = Split(Split(c_line, ") As ")(1), " ")(0)
+        Case c_line Like "* As New *":  c_as = Split(c_line, " As New ")(1)
+        Case c_line Like "* As *":      c_as = Split(Split(c_line, " As ")(1), " ")(0)
+    End Select
+    If c_as = vbNullString Then Stop
+    
+xt: Exit Sub
+
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
+End Sub
+
+Private Function ErrSrc(ByVal e_proc As String) As String
+    ErrSrc = "mItems" & "." & e_proc
+End Function
+
+Public Function IsSheetDocMod(ByVal i_vbc As VBComponent, _
+                              ByVal i_wbk As Workbook, _
+                     Optional ByRef i_wsh As Worksheet) As Boolean
+' ------------------------------------------------------------------------------
+' When the VBComponent (vbc) represents a Worksheet the function returns TRUE
+' and the corresponding Worksheet (i_wsh).
+' ------------------------------------------------------------------------------
+    Dim wsh As Worksheet
+
+    IsSheetDocMod = i_vbc.Type = vbext_ct_Document And i_vbc.name <> i_wbk.CodeName
+    If IsSheetDocMod Then
+        For Each wsh In i_wbk.Worksheets
+            If wsh.CodeName = i_vbc.name Then
+                Set i_wsh = wsh
+                Exit For
+            End If
+        Next wsh
+    End If
+
+End Function
+
+Public Function IsUniqueItem(ByVal i_item As String) As Boolean
+    If dctPublicItemsUnique.Exists(i_item) Then
+        IsUniqueItem = dctPublicItemsUnique(i_item).Count = 1
+    End If
+    
+End Function
+
+Public Sub Item(ByVal c_public As String, _
+                ByVal c_line As String, _
+                ByRef c_item As String)
+' ------------------------------------------------------------------------------------
+' Returns the name of the Public (c_public) as the public item (c_item).
+' ------------------------------------------------------------------------------------
+    Const PROC = "Item"
+                       
+    On Error GoTo eh
+    c_item = Trim(Split(c_line, c_public)(1))
+    c_item = Trim(Split(c_item, " ")(0))
+    c_item = Trim(Split(c_item, "(")(0))
+    If c_item = vbNullString Then Stop
+    
+xt: Exit Sub
+
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
+End Sub
+
+Public Sub ItemAs(ByVal c_public As String, _
+                  ByVal c_line As String, _
+                  ByRef c_item As String, _
+                  ByRef c_as As String)
+' ------------------------------------------------------------------------------------
+' Returns the name of the Public (c_public) as the public item (c_item).
+' ------------------------------------------------------------------------------------
+    Const PROC = "ItemAs"
                        
     On Error GoTo eh
     Item c_public, c_line, c_item
     If c_item = vbNullString Then Stop
+    
     DeclaredAs c_line, c_as
     If c_as = vbNullString Then Stop
     
@@ -624,6 +531,76 @@ eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case Else:      GoTo xt
     End Select
 End Sub
+
+Public Function KindOfComponent(ByVal en As enKindOfComponent) As String
+    Select Case en
+        Case enStandardModule:  KindOfComponent = "Standard-Module"
+        Case enClassModule:     KindOfComponent = "Class-Module"
+        Case enWorkbook:        KindOfComponent = "Workbook"
+        Case enWorksheet:       KindOfComponent = "WorkSheet"
+        Case enUserForm:        KindOfComponent = "UserForm"
+    End Select
+End Function
+
+Public Function KindOfItem(ByVal en As enKindOfItem) As String
+
+    Select Case en
+        Case enClassInstance:   KindOfItem = "Class-Instance"
+        Case enConstant:        KindOfItem = "Constant"
+        Case enEnumeration:     KindOfItem = "Enumeration"
+        Case enFunction:        KindOfItem = "Function"
+        Case enMethod:          KindOfItem = "Method"
+        Case enPropertyGet:     KindOfItem = "Property-Get"
+        Case enPropertyLet:     KindOfItem = "Property-Let"
+        Case enPropertySet:     KindOfItem = "Property-Set"
+        Case enSub:             KindOfItem = "Sub-Procedure"
+        Case enUserDefinedType: KindOfItem = "User-Defined-Type"
+        Case enVariable:        KindOfItem = "Variable"
+    End Select
+    
+End Function
+
+Public Function KoPstring(ByVal k_kop As vbext_ProcKind) As String
+    Select Case k_kop
+        Case vbext_pk_Get:  KoPstring = "Get"
+        Case vbext_pk_Let:  KoPstring = "Let"
+        Case vbext_pk_Proc: KoPstring = "Proc"
+        Case vbext_pk_Set:  KoPstring = "Set"
+    End Select
+End Function
+
+Private Function Progress(ByVal p_procs As Long, _
+                          ByVal p_procs_total As Long, _
+                          ByVal p_lines_analysed As Long, _
+                          ByVal p_lines_skipped As Long) As String
+    Progress = "Items (used/unused): " & Format(dctUsed.Count, "#,##0") & "/" & _
+               Format(dctPublicItems.Count, "#,##0") & _
+               " Analysed: " & Format(p_procs, "#,000") & _
+               " (of " & Format(p_procs_total, "#,000") & _
+               ") Procedures, " & Format(p_lines_analysed, "#0,000") & _
+               " Lines analysed, " & Format(p_lines_skipped, "#0,000") & _
+               " Lines skipped."
+End Function
+
+Private Function PublicItemCollCodeLine(ByVal cll As Collection) As String:                 PublicItemCollCodeLine = cll(4):                                                        End Function
+
+Private Function PublicItemCollCodeLineNo(ByVal cll As Collection) As String:               PublicItemCollCodeLineNo = cll(3):                                                      End Function
+
+Private Function PublicItemCollInCodeLine(ByVal cll As Collection) As String:               PublicItemCollInCodeLine = cll(9):                                                      End Function
+
+Private Function PublicItemCollInCodeLineNo(ByVal cll As Collection) As String:             PublicItemCollInCodeLineNo = cll(8):                                                    End Function
+
+Private Function PublicItemCollInKindOfComp(ByVal cll As Collection) As enKindOfComponent:  PublicItemCollInKindOfComp = cll(6):                                                    End Function
+
+Private Function PublicItemCollInKindOfCompItem(ByVal cll As Collection) As String:         PublicItemCollInKindOfCompItem = KindOfComponent(cll(6)) & "." & KindOfItem(cll(7)):    End Function
+
+Private Function PublicItemCollInKindOfItem(ByVal cll As Collection) As enKindOfItem:       PublicItemCollInKindOfItem = cll(7):                                                    End Function
+
+Private Function PublicItemCollKindOfComp(ByVal cll As Collection) As enKindOfComponent:    PublicItemCollKindOfComp = cll(1):                                                      End Function
+
+Public Function PublicItemCollKindOfCompItem(ByVal cll As Collection) As String:            PublicItemCollKindOfCompItem = KindOfComponent(cll(1)) & "." & KindOfItem(cll(2)):      End Function
+
+Private Function PublicItemCollKindOfItem(ByVal cll As Collection) As enKindOfItem:         PublicItemCollKindOfItem = cll(2):                                                      End Function
 
 Private Sub PushInstanceOnWithStack(ByVal r_comp_name As String, _
                                     ByVal r_proc_name As String, _
@@ -659,8 +636,32 @@ Private Sub PushInstanceOnWithStack(ByVal r_comp_name As String, _
         End If
     End If
     If sClass = "wsConfig" Then Stop
-xt: mWithStack.Push sClass
+xt: mStack.Push sClass
     Exit Sub
+
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
+End Sub
+
+Public Sub Variable(ByVal c_public As String, _
+                    ByVal c_line As String, _
+                    ByRef c_item As String, _
+                    ByRef c_as As String)
+' ------------------------------------------------------------------------------------
+' Returns the name of the code line (c_line) the public declared item (c_item) and its
+' As declaration (c_as).
+' ------------------------------------------------------------------------------------
+    Const PROC = "Variable"
+                       
+    On Error GoTo eh
+    Item c_public, c_line, c_item
+    If c_item = vbNullString Then Stop
+    DeclaredAs c_line, c_as
+    If c_as = vbNullString Then Stop
+    
+xt: Exit Sub
 
 eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
         Case vbResume:  Stop: Resume

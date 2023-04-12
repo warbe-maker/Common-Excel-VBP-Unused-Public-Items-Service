@@ -1,4 +1,4 @@
-Attribute VB_Name = "mProc"
+Attribute VB_Name = "mProcs"
 Option Explicit
 
 Public LinesTotal   As Long

@@ -1,4 +1,4 @@
-Attribute VB_Name = "mWithStack"
+Attribute VB_Name = "mStack"
 Option Explicit
 
 Private WithStack               As Collection
@@ -24,6 +24,7 @@ Public Function Top(Optional ByRef c_class_mod As String) As String
         c_class_mod = WithStack(WithStack.Count)
         Top = c_class_mod
     End If
+    
 End Function
 
 

@@ -172,8 +172,8 @@ Private Sub DisplayResult()
     KeySort dctUsed
     For Each vPublic In dctUsed
         Set cll = dctUsed(vPublic)
-        lMaxPublic = mItems.Max(lMaxPublic, Len(vPublic))
-        lMaxUsing = mItems.Max(lMaxUsing, Len(cll(5)))
+        lMaxPublic = mBasic.Max(lMaxPublic, Len(vPublic))
+        lMaxUsing = mBasic.Max(lMaxUsing, Len(cll(5)))
     Next vPublic
     
     WriteToFile Align("Public item", lMaxPublic, AlignLeft) & " " & Align("Used in (VBComponent.Procedure) by example", lMaxUsing + 2, AlignLeft) & "In code line"
@@ -270,7 +270,7 @@ Private Function MaxKindOfComp() As Long
     Dim en  As enKindOfComponent
     
     For en = enKindOfComponent.enA To enKindOfComponent.enZ
-        MaxKindOfComp = mItems.Max(MaxKindOfComp, Len(KindOfComponent(en)))
+        MaxKindOfComp = mBasic.Max(MaxKindOfComp, Len(KindOfComponent(en)))
     Next en
     
 End Function
@@ -279,7 +279,7 @@ Private Function MaxKindOfItem() As Long
     Dim en  As enKindOfItem
     
     For en = enKindOfItem.enA To enKindOfItem.enZ
-        MaxKindOfItem = mItems.Max(MaxKindOfItem, Len(KindOfItem(en)))
+        MaxKindOfItem = mBasic.Max(MaxKindOfItem, Len(KindOfItem(en)))
     Next en
     
 End Function
@@ -287,61 +287,18 @@ End Function
 Private Function MaxLenItems(ByVal dct As Dictionary) As Long
     Dim v As Variant
     For Each v In dct
-        MaxLenItems = mItems.Max(MaxLenItems, Len(v))
+        MaxLenItems = mBasic.Max(MaxLenItems, Len(v))
     Next v
 End Function
 
-'Private Function OpenUrlEtc(ByVal oue_string As String, _
-'                            ByVal oue_show_how As Long) As String
-'' ----------------------------------------------------------------------------
-'' Opens a folder, email-app, url, or even an Access instance.
-''
-'' Usage Examples
-'' - Open a folder:          OpenUrlEtc("C:\TEMP\",WIN_NORMAL)
-'' - Call Email app:         OpenUrlEtc("mailto:dash10@hotmail.com",WIN_NORMAL)
-'' - Open URL:               OpenUrlEtc("http://home.att.net/~dashish", WIN_NORMAL)
-'' - Handle Unknown extensions (call Open With Dialog):
-''                           OpenUrlEtc("C:\TEMP\TestThis",Win_Normal)
-'' - Start Access instance:  OpenUrlEtc("I:\mdbs\CodeNStuff.mdb", Win_NORMAL)
-''
-'' Copyright:
-'' This code was originally written by Dev Ashish. It is not to be altered or
-'' distributed, except as part of an application. You are free to use it in any
-'' application, provided the copyright notice is left unchanged.
-''
-'' Code Courtesy of: Dev Ashish
-'' ----------------------------------------------------------------------------
-'
-'    Dim lRet            As Long
-'    Dim varTaskID       As Variant
-'    Dim stRet           As String
-'    Dim hWndAccessApp   As Long
-'
-'    '~~ First try ShellExecute
-'    lRet = apiShellExecute(hWndAccessApp, vbNullString, oue_string, vbNullString, vbNullString, oue_show_how)
-'
-'    Select Case True
-'        Case lRet = ERROR_OUT_OF_MEM:       stRet = "Error: Out of Memory/Resources. Couldn't Execute!"
-'        Case lRet = ERROR_FILE_NOT_FOUND:   stRet = "Error: File not found.  Couldn't Execute!"
-'        Case lRet = ERROR_PATH_NOT_FOUND:   stRet = "Error: Path not found. Couldn't Execute!"
-'        Case lRet = ERROR_BAD_FORMAT:       stRet = "Error:  Bad File Format. Couldn't Execute!"
-'        Case lRet = ERROR_NO_ASSOC          ' Try the OpenWith dialog
-'            varTaskID = Shell("rundll32.exe shell32.dll,OpenAs_RunDLL " & oue_string, WIN_NORMAL)
-'            lRet = (varTaskID <> 0)
-'        Case lRet > ERROR_SUCCESS:         lRet = -1
-'    End Select
-'
-'    OpenUrlEtc = lRet & IIf(stRet = vbNullString, vbNullString, ", " & stRet)
-'
-'End Function
-'
 Private Sub ProvisionOfExcludedCodelines(Optional ByVal p_excluded As String = vbNullString)
     Dim sSplit As String
     
     If p_excluded <> vbNullString Then
         If InStr(p_excluded, vbCrLf) <> 0 Then
             sSplit = vbCrLf
-        ElseIf InStr(p_excluded, vbLf) <> 0 Then
+        ElseIf InStr(p_excluded, vbLf) <> 0 _
+        Then
             sSplit = vbLf
         Else
             sSplit = vbCr
@@ -403,14 +360,12 @@ Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
     mBasic.BoP ErrSrc(PROC)
     
     ProvisionOfTheServicedWorkbook u_wbk:   If wbkServiced Is Nothing Then GoTo xt
-    
     ProvisionOfExcludedComponents u_excluded_components
-    
     ProvisionOfExcludedCodelines u_excluded_code_lines
     
     Initialize
     mComps.Collect Excluded
-    mProc.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
+    mProcs.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
     mClass.CollectInstncsVBPGlobal  ' Collect all class instance which are VB-Project global
     mClass.CollectInstncsCompGlobal ' Collect all class instances which are ComponenKoItemt global
     mClass.CollectInstncsProcLocal  ' Collect all class instances in Procedures

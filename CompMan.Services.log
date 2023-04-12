@@ -1,21 +1,20 @@
-23-04-11 19:50:08 Export Changed Components (by CompMan.xlsb) for VBPunusedPublic.xlsb: 
-23-04-11 19:50:08 ----------------------------------------------------------------------
-23-04-11 19:50:09 Obsolete Export-File 'mPublic.bas' deleted (VBComponent no longer exists)
-23-04-11 19:50:09 Class-Module    clsStk ........: Unchanged Used Common Component
-23-04-11 19:50:09 UserForm        fExcludeInclude: Modified code exported
-23-04-11 19:50:09 UserForm        fMsg ..........: Unchanged Used Common Component
-23-04-11 19:50:09 Standard-Module mBasic ........: Modified Used Common Component exported (due revert allert registered!)
-23-04-11 19:50:09 Standard-Module mClass ........: Modified code exported
-23-04-11 19:50:09 Standard-Module mCompManClient : Unchanged Used Common Component
-23-04-11 19:50:09 Standard-Module mComps ........: Unchanged component
-23-04-11 19:50:09 Standard-Module mErH ..........: Unchanged Used Common Component
-23-04-11 19:50:09 Standard-Module mItems ........: Unchanged component
-23-04-11 19:50:09 Standard-Module mLine .........: Modified code exported
-23-04-11 19:50:09 Standard-Module mMsg ..........: Unchanged Used Common Component
-23-04-11 19:50:09 Standard-Module mProc .........: Unchanged component
-23-04-11 19:50:09 Standard-Module mTrc ..........: Unchanged Used Common Component
-23-04-11 19:50:09 Standard-Module mUnused .......: Modified code exported
-23-04-11 19:50:09 Standard-Module mUnusedTest ...: Unchanged component
-23-04-11 19:50:09 Standard-Module mWithStack ....: Unchanged component
-23-04-11 19:50:09 Workbook        wbUnusedPublic : Unchanged component
-23-04-11 19:50:09 Worksheet       wsUnusedPublic : Unchanged component
+23-04-12 16:06:14 Export Changed Components (by CompMan.xlsb) for VBPunusedPublic.xlsb: 
+23-04-12 16:06:14 ----------------------------------------------------------------------
+23-04-12 16:06:15 Class-Module    clsStk ........: Unchanged Used Common Component
+23-04-12 16:06:15 UserForm        fExcludeInclude: Unchanged component
+23-04-12 16:06:15 UserForm        fMsg ..........: Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mBasic ........: Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mClass ........: Unchanged component
+23-04-12 16:06:15 Standard-Module mCompManClient : Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mComps ........: Unchanged component
+23-04-12 16:06:15 Standard-Module mErH ..........: Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mItems ........: Unchanged component
+23-04-12 16:06:15 Standard-Module mLine .........: Unchanged component
+23-04-12 16:06:15 Standard-Module mMsg ..........: Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mProcs ........: Unchanged component
+23-04-12 16:06:15 Standard-Module mStack ........: Unchanged component
+23-04-12 16:06:15 Standard-Module mTrc ..........: Unchanged Used Common Component
+23-04-12 16:06:15 Standard-Module mUnused .......: Unchanged component
+23-04-12 16:06:15 Standard-Module mUnusedTest ...: Unchanged component
+23-04-12 16:06:15 Workbook        wbUnusedPublic : Unchanged component
+23-04-12 16:06:15 Worksheet       wsUnusedPublic : Unchanged component

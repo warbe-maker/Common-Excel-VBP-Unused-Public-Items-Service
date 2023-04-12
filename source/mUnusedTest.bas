@@ -18,7 +18,8 @@ Private Sub Test_UnusedPublic()
     Const LINES_EXCLUDED    As String = "Select Case*ErrMsg(ErrSrc(PROC))" & vbCrLf & _
                                         "Case vbResume:*Stop:*Resume" & vbCrLf & _
                                         "Case Else:*GoTo xt"
-        
+    mTrc.LogFile = Replace(ThisWorkbook.FullName, ThisWorkbook.name, "Exec.trc")
+    
     mBasic.BoP ErrSrc(PROC)
     '~~ Providing the Workbook argments saves the Workbook selection dialog
     '~~ Providing the specification of the excluded VBComponents saves the selection dialog

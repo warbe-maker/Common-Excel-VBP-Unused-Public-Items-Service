@@ -141,7 +141,7 @@ Private bLogToFileSuspended As Boolean
 Public Property Get LogToFileSuspended() As Boolean:        LogToFileSuspended = bLogToFileSuspended:       End Property
 Public Property Let LogToFileSuspended(ByVal b As Boolean): bLogToFileSuspended = b:                        End Property
 
-Public Property Get DefaultLogSpec() As String
+Public Property Get DefaultLogSpec(Optional ByVal wbk As Workbook = Nothing) As String
 ' ----------------------------------------------------------------------------
 ' Specifies a default execution trace output file in the ActiveWorkbook's
 ' parent folder. Note: By intention not ThisWorkbook is used! In case the
@@ -149,7 +149,8 @@ Public Property Get DefaultLogSpec() As String
 ' folder which means that Excel will allways open the file as an Addin which is
 ' absolutely useless.
 ' ----------------------------------------------------------------------------
-    DefaultLogSpec = Replace(ActiveWorkbook.FullName, ActiveWorkbook.name, "Exec.trc")
+    If wbk Is Nothing Then Set wbk = ActiveWorkbook
+    DefaultLogSpec = Replace(wbk.FullName, wbk.name, "Exec.trc")
 End Property
 Private Property Get DIR_BEGIN_CODE() As String:            DIR_BEGIN_CODE = DIR_BEGIN_ID:                  End Property
 
@@ -510,7 +511,13 @@ Public Sub Dsply()
 ' ----------------------------------------------------------------------------
 ' Display service using ShellRun to open the Logfile.
 ' ----------------------------------------------------------------------------
-    ShellRun LogFile, WIN_NORMAL
+    Dim fso As New FileSystemObject
+    If fso.FileExists(LogFile) Then
+        ShellRun LogFile, WIN_NORMAL
+    Else
+        MsgBox "No trace log file " & LogFile & " written!", vbOKOnly, "No Trace log file!"
+    End If
+    Set fso = Nothing
 End Sub
 
 Private Function DsplyArgName(ByVal s As String) As Boolean

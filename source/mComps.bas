@@ -1,5 +1,11 @@
 Attribute VB_Name = "mComps"
 Option Explicit
+' ------------------------------------------------------------------------------------
+' Standard Module mComps:
+' =======================
+' Public services:
+' - Collect Provides a Dictionary with all VBComponents not excluded.
+' ------------------------------------------------------------------------------------
 
 Private dctExcluded As Dictionary
 

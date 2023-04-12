@@ -8,9 +8,9 @@ DueModificationWarning=1
 KindOfComponent=used
 RawRevisionNumber=2023-03-30.002
 [mBasic]
-KindOfComponent=used
-RawRevisionNumber=2023-01-24.002
 DueModificationWarning=1
+KindOfComponent=used
+RawRevisionNumber=2023-04-11.003
 [mCompManClient]
 DueModificationWarning=1
 KindOfComponent=used

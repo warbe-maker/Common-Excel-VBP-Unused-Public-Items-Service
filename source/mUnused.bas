@@ -366,9 +366,9 @@ Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
     Initialize
     mComps.Collect Excluded
     mProcs.Collect                   ' Collect all procedures in not exluded VBComponenKoItemts
-    mClass.CollectInstncsVBPGlobal  ' Collect all class instance which are VB-Project global
-    mClass.CollectInstncsCompGlobal ' Collect all class instances which are ComponenKoItemt global
-    mClass.CollectInstncsProcLocal  ' Collect all class instances in Procedures
+    mClass.CollectInstncsScopeProject  ' Collect all class instance which are VB-Project global
+    mClass.CollectInstncsScopeComp ' Collect all class instances which are ComponenKoItemt global
+    mClass.CollectInstncsScopeProc  ' Collect all class instances in Procedures
     CollectOnActions
     mItems.CollectPublicItems
     mItems.CollectPublicUsage

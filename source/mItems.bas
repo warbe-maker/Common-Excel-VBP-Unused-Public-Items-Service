@@ -356,20 +356,20 @@ Public Sub CollectPublicUsage()
                         If sLineProc Like "*Function *" _
                         Or sLineProc Like "* Property Get *" _
                         Or sLineProc Like "* Property Set *" Then sIgnore = mLine.Ignore(sLineProc)
-'                        mLine.StopIfLike sLineProc, ".DueModificationWarning = True"
+'                        If mLine.IsLike(sLineProc, "Set fMon = mMsg.MsgInstance(Title)") Then Stop
                         
                         '~~ Prepare the code line for being parsed for any used public item
                         mLine.ForBeingParsed sLineProc, sLineToParse, sCompParsed, sProcParsed, sDelim, sIgnore ' prepare line for exploration
                         
                         '~~ Loop through all public items for being checked if used in the sLineToParse
                         For Each vPublic In dctPublicItems
+'                            If vPublic Like "*MsgInstance*" Then Stop
                             sCompPublic = Split(vPublic, ".")(0)
                             sItemPublic = Split(vPublic, ".")(1)
                             '~~ Immediately skip the public item when it is not found in the sLineToParse
                             If InStr(sLineToParse, sItemPublic) <> 0 Then
                                 '~~ Skip the public item when the to-be-parsed component is identical with the public item's component
                                 If sCompParsed <> sCompPublic Then ' no need to explore the own module
-                                
                                     If mLine.RefersToPublicItem(sLineToParse, vPublic, vbcm.Parent, sClass) Then
                                         '~~ Move the found public item to the dctUsed dictionary
                                         If Not dctUsed.Exists(vPublic) Then
@@ -389,8 +389,11 @@ Public Sub CollectPublicUsage()
 
                         '~~ Collect all Public items in OnActions
                         For Each vPublic In dctPublicItems
+                            sCompPublic = Split(vPublic, ".")(0)
+                            sItemPublic = Split(vPublic, ".")(1)
+'                            If vPublic Like "*_Click*" Then Stop
                             Set cllUsed = dctPublicItems(vPublic)
-                            If dctOnActions.Exists(vPublic) Then
+                            If dctOnActions.Exists(sItemPublic) Then
                                 If Not dctUsed.Exists(vPublic) Then
                                     cllUsed.Add sCompParsed & "." & sProcParsed
                                     cllUsed.Add lStartsAt
@@ -407,12 +410,8 @@ Public Sub CollectPublicUsage()
         Next vProc
 nxt: Next vComp
     Application.StatusBar = Progress(lProcs, lProcsTotal, lLinesAnalysed, lLinesSkipped)
-    For Each v In dctUsed
-        If dctPublicItems.Exists(v) Then
-            dctPublicItems.Remove v
-        End If
-    Next v
-    
+    Debug.Print Progress(lProcs, lProcsTotal, lLinesAnalysed, lLinesSkipped)
+        
     Set dctCodeRefPublicItem = dct
     Set dct = Nothing
     Set cllUsed = Nothing
@@ -456,27 +455,6 @@ End Sub
 
 Private Function ErrSrc(ByVal e_proc As String) As String
     ErrSrc = "mItems" & "." & e_proc
-End Function
-
-Public Function IsSheetDocMod(ByVal i_vbc As VBComponent, _
-                              ByVal i_wbk As Workbook, _
-                     Optional ByRef i_wsh As Worksheet) As Boolean
-' ------------------------------------------------------------------------------
-' When the VBComponent (vbc) represents a Worksheet the function returns TRUE
-' and the corresponding Worksheet (i_wsh).
-' ------------------------------------------------------------------------------
-    Dim wsh As Worksheet
-
-    IsSheetDocMod = i_vbc.Type = vbext_ct_Document And i_vbc.name <> i_wbk.CodeName
-    If IsSheetDocMod Then
-        For Each wsh In i_wbk.Worksheets
-            If wsh.CodeName = i_vbc.name Then
-                Set i_wsh = wsh
-                Exit For
-            End If
-        Next wsh
-    End If
-
 End Function
 
 Public Function IsUniqueItem(ByVal i_item As String) As Boolean
@@ -631,6 +609,7 @@ Private Sub PushInstanceOnWithStack(ByVal r_comp_name As String, _
     
     ElseIf r_line Like "With *" Then
         sInstance = Trim(Split(r_line, "With ")(1))
+        sInstance = Split(sInstance, "(")(0)
         If mClass.IsInstance(r_comp_name, sInstance, sClass, r_proc_name) Then
             GoTo xt
         End If

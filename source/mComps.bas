@@ -52,7 +52,8 @@ Public Sub Collect(ByVal c_excluded As String)
                     dctComps.Add .name, cll
                     Set cll = Nothing
                 End If
-                If .Type = vbext_ct_ClassModule Then
+                If .Type = vbext_ct_ClassModule _
+                Or .Type = vbext_ct_MSForm Then
                     mClass.IsClassModule(sComp, vbc) = True
                 End If
             End If

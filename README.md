@@ -44,13 +44,40 @@ End Sub
 - Nested With End With instructions for Class Instances
 
 ## Performance
-Though the performance shouldn't really matter for a service used only occasionally:
+Since the service will be used only occasionally the performance shouldn't really matter. The performance mainly depends on the number of detected unused items and appears acceptable. <br>
+### Example 
 ```
- 12 Thousand analyzed code lines (2 thousand skipped) in
-692 Procedures had been analyzed for 
-277 Public declared items in
- 10 Seconds
+~12 Thousand analyzed code lines (~2 thousand skipped) in
+687 Procedures had been analyzed for 
+283 Public declared items within
+  5 Seconds for a result of
+  0 of 283 items detected unused
 ```
-The result was 3 unused and 274 used Public declared items.
+See also the below execution trace.
+```
+23-04-12 17:13:09 Execution trace by 'Common VBA Execution Trace Service' (https://github.com/warbe-maker/Common-VBA-Execution-Trace-Service)
+23-04-12 17:13:09                 >> Begin execution trace 
+23-04-12 17:13:09 00,0000         |  >> mUnusedPublicTest.Test_UnusedPublic
+23-04-12 17:13:09 00,0011         |  |  >> mUnused.Unused
+23-04-12 17:13:09 00,0026         |  |  |  >> mComps.Collect
+23-04-12 17:13:09 00,0036 00,0009 |  |  |  << mComps.Collect
+23-04-12 17:13:09 00,0040         |  |  |  >> mProc.Collect
+23-04-12 17:13:09 00,1672 00,1633 |  |  |  << mProc.Collect
+23-04-12 17:13:09 00,1742         |  |  |  >> mClass.CollectInstncsCompGlobal
+23-04-12 17:13:09 00,1813 00,0071 |  |  |  << mClass.CollectInstncsCompGlobal
+23-04-12 17:13:09 00,1824         |  |  |  >> mClass.CollectInstncsProcLocal
+23-04-12 17:13:10 00,3409 00,1586 |  |  |  << mClass.CollectInstncsProcLocal
+23-04-12 17:13:10 00,3424         |  |  |  >> mItems.CollectPublicItems
+23-04-12 17:13:10 00,3458 00,0035 |  |  |  << mItems.CollectPublicItems
+23-04-12 17:13:10 00,3461         |  |  |  >> mItems.CollectPublicUsage
+23-04-12 17:13:14 04,8192 04,4730 |  |  |  << mItems.CollectPublicUsage
+23-04-12 17:13:14 04,9265 04,9254 |  |  << mUnused.Unused
+23-04-12 17:13:14 04,9270 04,9270 |  << mUnusedPublicTest.Test_UnusedPublic
+23-04-12 17:13:14 04,9270 04,9270 << End execution trace 
+23-04-12 17:13:14                 Impact on the overall performance (caused by the trace itself): 00,0005 seconds!
+23-04-12 17:13:14 Execution trace by 'Common VBA Execution Trace Service' (https://github.com/warbe-maker/Common-VBA-Execution-Trace-Service)
+```
+### Approach
+All required information is collected first which 200 to 300 msec. Subsequently each code line is checked once for any of the public declared items being used. Any used item detected is removed from the public items and moved to a used collection. I.e. that the loop for a code line over all (remaining) public items becomes faster with each one detected used.
 
  [1]:https://gitcdn.link/cdn/warbe-maker/Common-Excel-VBP-Unused-Public-Items-Service/master/VBPunusedPublic.xlsb

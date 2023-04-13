@@ -13,7 +13,7 @@ Option Explicit
 ' - NextLine
 ' - RefersToPublicItem          Returns TRUE when a code line contains the 'Public'
 '                               item.
-' - StopIfLike                  For debuging purpose only
+' - IsLike                  For debuging purpose only
 ' ------------------------------------------------------------------------------------
 
 Private Sub ConcatenateAllContinuationLines(ByVal c_line_starts_at As Long, _
@@ -275,9 +275,11 @@ eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
 End Function
 
 Public Function IsEndProc(ByVal c_line As String) As Boolean
-    IsEndProc = c_line Like "*End Property*" _
-                     Or c_line Like "*End Function*" _
-                     Or c_line Like "*End Sub*"
+    Dim s As String
+    s = Trim(c_line)
+    IsEndProc = s Like "End Property*" _
+             Or s Like "End Function*" _
+             Or s Like "End Sub*"
 
 End Function
 
@@ -540,10 +542,10 @@ Private Sub SkipLinesEmptyOrComment(ByRef c_i As Long, _
     
 End Sub
 
-Public Sub StopIfLike(ByVal c_line As String, _
-                               ByVal c_like As String, _
-                      Optional ByVal c_comp_using As String = vbNullString, _
-                      Optional ByVal c_comp As String)
+Public Function IsLike(ByVal c_line As String, _
+                      ByVal c_like As String, _
+             Optional ByVal c_comp_using As String = vbNullString, _
+             Optional ByVal c_comp As String) As Boolean
 ' ----------------------------------------------------------------------------
 '
 ' ----------------------------------------------------------------------------
@@ -553,11 +555,11 @@ Public Sub StopIfLike(ByVal c_line As String, _
             And c_comp_using = c_comp Then
                 Stop
             End If
-        ElseIf c_line Like "*" & c_like & "*" Then
-            Stop
+        Else
+            IsLike = c_line Like "*" & c_like & "*"
         End If
     End If
-End Sub
+End Function
 
 Private Sub UnstripCommentIfAny(ByRef c_line As String)
 ' ------------------------------------------------------------------------------------

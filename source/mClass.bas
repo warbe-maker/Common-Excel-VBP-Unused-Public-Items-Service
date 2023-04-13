@@ -4,20 +4,20 @@ Option Explicit
 ' Standard Module mClass: Collection and checks for Class Modules and Class Instances.
 ' =======================
 ' Public services:
-' - CollectInstncsCompGlobal    Collection of Component global Class instances
-' - CollectInstncsVBPGlobal     Collection of Project global Class instances
-' - CollectInstncsProcLocal     Collection of Procedure local Class instances
+' - CollectInstncsScopeComp    Collection of Component global Class instances
+' - CollectInstncsScopeProject     Collection of Project global Class instances
+' - CollectInstncsScopeProc     Collection of Procedure local Class instances
 ' - IsInstance                  Check if a string is known as a Class instance
 ' - IsClassModule Get           Check if a Name is the Name of a Class Module
 '                 Let           Register a Name is the Name of a Class Module
 ' ------------------------------------------------------------------------------------
 
-Private dctInstncsProcLocal     As Dictionary ' collection of Procedure local declared class instances
-Private dctInstncsCompGlobal    As Dictionary ' collection of VBComponent class instances
+Private dctInstncsScopeProc     As Dictionary ' collection of Procedure local declared class instances
+Private dctInstncsScopeComp    As Dictionary ' collection of VBComponent class instances
 Private dctInstncsVBPrjctGlobal As Dictionary
 Private dctClassModules         As Dictionary
 
-Public Sub CollectInstncsCompGlobal()
+Public Sub CollectInstncsScopeComp()
 ' ------------------------------------------------------------------------------------
 ' Collects for all collected VBComponents (dctComps) the global Class Instances
 ' in a Directory whereby the key is <comp> and the item is the Directory of
@@ -25,7 +25,7 @@ Public Sub CollectInstncsCompGlobal()
 ' Note: For DataModules = Worksheet the instance and the class name are the Worksheets
 '       ModuleName.
 ' ------------------------------------------------------------------------------------
-    Const PROC = "CollectInstncsCompGlobal"
+    Const PROC = "CollectInstncsScopeComp"
     
     On Error GoTo eh
     Dim i           As Long
@@ -42,7 +42,7 @@ Public Sub CollectInstncsCompGlobal()
     Dim cllComp     As Collection
     
     mBasic.BoP ErrSrc(PROC)
-    Set dctInstncsCompGlobal = New Dictionary
+    Set dctInstncsScopeComp = New Dictionary
     For Each vComp In dctComps
         sComp = vComp
         Set cllComp = dctComps(vComp)
@@ -58,7 +58,7 @@ Public Sub CollectInstncsCompGlobal()
                 lStopLoop = lStopLoop + 1
                 If lStopLoop > 50 Then Stop
                 If mClass.IsClassModule(sAs) Then
-                    If Not dctInstncsCompGlobal.Exists(sItem) Then
+                    If Not dctInstncsScopeComp.Exists(sItem) Then
                         dct.Add sItem, sAs
                     End If
                     sLine = Trim(Replace(Replace(sLine, " As " & sAs, vbNullString, 1, 1), sItem, vbNullString, 1, 1))
@@ -67,8 +67,8 @@ Public Sub CollectInstncsCompGlobal()
             If lStartsAt = 0 Then i = i + 1
         Wend
         
-        If Not dctInstncsCompGlobal.Exists(sComp) Then
-            dctInstncsCompGlobal.Add sComp, dct
+        If Not dctInstncsScopeComp.Exists(sComp) Then
+            dctInstncsScopeComp.Add sComp, dct
             Set dct = Nothing
         End If
     Next vComp
@@ -82,7 +82,7 @@ eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
     End Select
 End Sub
                                             
-Public Sub CollectInstncsVBPGlobal()
+Public Sub CollectInstncsScopeProject()
     
     Dim cll             As Collection
     Dim dct             As Dictionary
@@ -101,13 +101,18 @@ Public Sub CollectInstncsVBPGlobal()
     
     Set dctInstncsVBPrjctGlobal = New Dictionary
     
-    '~~ Collect per-se VBP-global Class instances (Workbook and the Worksheets)
+    '~~ Collect per-se VBP-global Class instances (the Workbook, the Worksheets, and all UserForms)
     '~~ in the dctInstncsVBPrjctGlobal Directory under a vbNullString key !
     Set dct = New Dictionary
     dct.Add wbkServiced.CodeName, wbkServiced.CodeName
     For Each wsh In wbkServiced.Worksheets
         dct.Add wsh.CodeName, wsh.CodeName
     Next wsh
+    For Each vbc In wbkServiced.VBProject.VBComponents
+        If vbc.Type = vbext_ct_MSForm Then
+            dct.Add vbc.name, vbc.name
+        End If
+    Next vbc
     dctInstncsVBPrjctGlobal.Add vbNullString, dct
     Set dct = Nothing
     
@@ -145,13 +150,13 @@ Private Function ErrSrc(ByVal e_proc As String) As String
     ErrSrc = "mClass" & "." & e_proc
 End Function
 
-Public Sub CollectInstncsProcLocal()
+Public Sub CollectInstncsScopeProc()
 ' ------------------------------------------------------------------------------------
 ' Collects for all collected procedures (dctProcs) the local Class Instances in
 ' Directory whereby the key is <comp>.<proc> and the item is the Directory of
 ' instances with key = <instance-name> and item = <class-module-name>.
 ' ------------------------------------------------------------------------------------
-    Const PROC = "CollectInstncsProcLocal"
+    Const PROC = "CollectInstncsScopeProc"
     
     On Error GoTo eh
     Dim cllProc         As Collection
@@ -172,7 +177,7 @@ Public Sub CollectInstncsProcLocal()
     Dim dctInstProc     As Dictionary
     
     mBasic.BoP ErrSrc(PROC)
-    Set dctInstncsProcLocal = New Dictionary
+    Set dctInstncsScopeProc = New Dictionary
     For Each vComp In dctProcs
         Set dctInstComp = New Dictionary
         sComp = vComp
@@ -215,8 +220,8 @@ Public Sub CollectInstncsProcLocal()
             End If
         Next vProc
     
-        If Not dctInstncsProcLocal.Exists(sComp) And dctInstComp.Count <> 0 Then
-            dctInstncsProcLocal.Add sComp, dctInstComp
+        If Not dctInstncsScopeProc.Exists(sComp) And dctInstComp.Count <> 0 Then
+            dctInstncsScopeProc.Add sComp, dctInstComp
             Set dctInstComp = Nothing
         End If
     Next vComp
@@ -245,8 +250,8 @@ Public Function IsInstance(ByVal i_comp_name As String, _
     Dim v   As Variant
     
     If i_proc_name <> vbNullString Then
-        If dctInstncsProcLocal.Exists(i_comp_name) Then
-            Set dct = dctInstncsProcLocal(i_comp_name)
+        If dctInstncsScopeProc.Exists(i_comp_name) Then
+            Set dct = dctInstncsScopeProc(i_comp_name)
             If dct.Exists(i_proc_name) Then
                 Set dct = dct(i_proc_name)
                 If dct.Exists(i_instance_name) Then
@@ -260,8 +265,8 @@ Public Function IsInstance(ByVal i_comp_name As String, _
     
     '~~ When the i_instance_name is not known as a local class instance
     '~~ it still may be known as a VBComponent global one
-    If dctInstncsCompGlobal.Exists(i_comp_name) Then
-        Set dct = dctInstncsCompGlobal(i_comp_name)
+    If dctInstncsScopeComp.Exists(i_comp_name) Then
+        Set dct = dctInstncsScopeComp(i_comp_name)
         If dct.Exists(i_instance_name) Then
             i_class_name = dct(i_instance_name)
             IsInstance = True

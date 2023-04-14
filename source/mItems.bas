@@ -90,10 +90,8 @@ Public dctProcLines             As Dictionary   ' All component's procedures wit
 Public dctProcs                 As Dictionary
 Public dctPublicItems           As Dictionary   ' All Public ... and Friend ... - finally only those not used
 Public dctUsed                  As Dictionary
-Public dctUnused                As Dictionary
 Public sFile                    As String
-
-                             
+                          
 Private Function Align(ByVal align_s As String, _
                        ByVal align_lngth As Long, _
               Optional ByVal align_mode As StringAlign = AlignLeft, _

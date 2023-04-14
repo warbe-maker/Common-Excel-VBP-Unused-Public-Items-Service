@@ -21,28 +21,7 @@ Option Explicit
 
 Public wbkServiced          As Workbook
 Public Excluded             As String
-Public sExcludedCodeLines   As String
 Public vExcludedCodeLines   As Variant
-
-Public Declare PtrSafe Function apiShellExecute Lib "shell32.dll" _
-    Alias "ShellExecuteA" _
-    (ByVal hWnd As Long, _
-    ByVal lpOperation As String, _
-    ByVal lpFile As String, _
-    ByVal lpParameters As String, _
-    ByVal lpDirectory As String, _
-    ByVal nShowCmd As Long) _
-    As Long
-'***App Window Constants***
-Private Const WIN_NORMAL = 1         'Open Normal
-
-'***Error Codes***
-Public Const ERROR_SUCCESS = 32&
-Public Const ERROR_NO_ASSOC = 31&
-Public Const ERROR_OUT_OF_MEM = 0&
-Public Const ERROR_FILE_NOT_FOUND = 2&
-Public Const ERROR_PATH_NOT_FOUND = 3&
-Public Const ERROR_BAD_FORMAT = 11&
 
 Private Property Get FileTemp(Optional ByVal tmp_path As String = vbNullString, _
                               Optional ByVal tmp_extension As String = ".tmp") As String
@@ -128,6 +107,7 @@ End Sub
 
 Private Sub DisplayResult()
     Dim cll                 As Collection
+    Dim dctUnused           As Dictionary
     Dim lMaxCompProcKind    As Long
     Dim lMaxKindOfComp      As Long
     Dim lMaxKindOfItem      As Long
@@ -149,9 +129,9 @@ Private Sub DisplayResult()
     s = Align("Kind of Component.Item", lMaxCompProcKind, AlignCentered) & " " & Align("Public item (component.item)", lMaxLenItems, AlignCentered):    WriteToFile s
     s = String(lMaxCompProcKind, "-") & " " & String(lMaxLenItems, "-"):                                                                                WriteToFile s
     
-    KeySort dctPublicItems
+    Set dctUnused = KeySort(dctPublicItems)
     
-    For Each vPublic In dctPublicItems
+    For Each vPublic In dctUnused
         Set cll = dctPublicItems(vPublic)
         sComp = Split(vPublic, ".")(0)
         sProc = Split(vPublic, ".")(1)
@@ -186,7 +166,7 @@ Private Sub DisplayResult()
         WriteToFile Align(vPublic, lMaxPublic + 1, AlignLeft, , ".") & Align(cll(5), lMaxUsing + 1, AlignLeft, , ".") & ": " & cll(7)
     Next vPublic
 
-    mBasic.ShellRun sFile, WIN_NORMAL
+    mBasic.ShellRun sFile
 
 End Sub
 
@@ -376,6 +356,7 @@ Public Sub Unused(Optional ByVal u_wbk As Workbook = Nothing, _
     DisplayResult
     
 xt: mBasic.EoP ErrSrc(PROC)
+    mTrc.Dsply
     Exit Sub
 
 eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))

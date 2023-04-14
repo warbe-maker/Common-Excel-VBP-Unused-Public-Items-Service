@@ -1,8 +1,8 @@
 Attribute VB_Name = "mProcs"
 Option Explicit
 
-Public LinesTotal   As Long
-Public ProcsTotal   As Long
+Private LinesTotal   As Long
+Private ProcsTotal   As Long
 
 Public Sub Collect()
 ' ------------------------------------------------------------------------------

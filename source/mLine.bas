@@ -547,7 +547,7 @@ Public Function IsLike(ByVal c_line As String, _
              Optional ByVal c_comp_using As String = vbNullString, _
              Optional ByVal c_comp As String) As Boolean
 ' ----------------------------------------------------------------------------
-'
+' For debuging only!
 ' ----------------------------------------------------------------------------
     If c_like <> vbNullString Then
         If c_comp_using <> vbNullString Then

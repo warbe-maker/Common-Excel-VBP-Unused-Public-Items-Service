@@ -1,8 +1,5 @@
 [_MostRecentExport]
 UsedExportFolder=source
-[clsStk]
-KindOfComponent=used
-RawRevisionNumber=2023-02-17.001
 [fMsg]
 DueModificationWarning=1
 KindOfComponent=used
@@ -19,7 +16,7 @@ RawRevisionNumber=2023-04-09.001
 KindOfComponent=used
 RawRevisionNumber=2022-05-25.001
 [mMsg]
-DueModificationWarning=0
+DueModificationWarning=1
 KindOfComponent=used
 RawRevisionNumber=2023-03-30.001
 [mTrc]

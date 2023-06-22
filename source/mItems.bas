@@ -157,6 +157,7 @@ Public Sub CollectOnActions()
                 sOnAction = Split(sOnAction, "!")(1)
                 If Not dct.Exists(sOnAction) Then
                     dct.Add sOnAction, vbNullString
+                    Debug.Print sOnAction
                 End If
             End If
         Next shp
@@ -389,16 +390,17 @@ Public Sub CollectPublicUsage()
                         For Each vPublic In dctPublicItems
                             sCompPublic = Split(vPublic, ".")(0)
                             sItemPublic = Split(vPublic, ".")(1)
-'                            If vPublic Like "*_Click*" Then Stop
                             Set cllUsed = dctPublicItems(vPublic)
-                            If dctOnActions.Exists(sItemPublic) Then
+                            If dctOnActions.Exists(vPublic) Then
                                 If Not dctUsed.Exists(vPublic) Then
                                     cllUsed.Add sCompParsed & "." & sProcParsed
                                     cllUsed.Add lStartsAt
                                     cllUsed.Add sLineProc
                                     dctUsed.Add vPublic, cllUsed
                                 End If
-                                If dctPublicItems.Exists(vPublic) Then dctPublicItems.Remove (vPublic)
+                                If dctPublicItems.Exists(vPublic) Then
+                                    dctPublicItems.Remove vPublic
+                                End If
                             End If
                         Next vPublic
                 End Select

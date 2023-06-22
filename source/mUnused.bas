@@ -106,68 +106,82 @@ Private Sub Initialize()
 End Sub
 
 Private Sub DisplayResult()
+    Const PROC = "DisplayResult"
+    
+    On Error GoTo eh
     Dim cll                 As Collection
     Dim dctUnused           As Dictionary
     Dim lMaxCompProcKind    As Long
     Dim lMaxKindOfComp      As Long
     Dim lMaxKindOfItem      As Long
     Dim lMaxLenItems        As Long
+    Dim lMaxLineNo          As Long
     Dim lMaxPublic          As Long
     Dim lMaxUsing           As Long
     Dim s                   As String
     Dim sComp               As String
     Dim sProc               As String
     Dim vPublic             As Variant
-
+    Dim Log                 As clsLog
+    
     lMaxKindOfComp = MaxKindOfComp
     lMaxKindOfItem = MaxKindOfItem
     lMaxLenItems = MaxLenItems(dctPublicItems)
-    
     lMaxCompProcKind = lMaxKindOfComp + lMaxKindOfItem + 3
     
-    s = "The following " & dctPublicItems.Count & " Public declared items are  u n u s e d ! *)" & vbCrLf:                                              WriteToFile s
-    s = Align("Kind of Component.Item", lMaxCompProcKind, AlignCentered) & " " & Align("Public item (component.item)", lMaxLenItems, AlignCentered):    WriteToFile s
-    s = String(lMaxCompProcKind, "-") & " " & String(lMaxLenItems, "-"):                                                                                WriteToFile s
+    With New clsLog
+        .FileName = "PublicUnused.txt"
+        .NewFile ' New result file with each execution
+        .Title "The following " & dctPublicItems.Count & " Public declared items are  u n u s e d ! *)"
+        .MaxItemLengths lMaxCompProcKind, lMaxLenItems
+        .Headers "|Kind of Component.Item |Public item (component.item) |"
+        .ColsDelimiter = " "
+        .AlignmentItems "|L|L|"
+        
+        Set dctUnused = KeySort(dctPublicItems)
+        For Each vPublic In dctUnused
+            Set cll = dctPublicItems(vPublic)
+            sComp = Split(vPublic, ".")(0)
+            sProc = Split(vPublic, ".")(1)
+            s = PublicItemCollKindOfCompItem(cll)
+            .Entry s, vPublic
+        Next vPublic
+        .Entry " "
+        .Entry "*) Public items are not analysed in their own component.  "
+        .Entry "   I.e. an unused Public item may still be used within its own Component."
+        .Entry "   In case the Public item should rather be turned into Private!"
+        .Entry " "
     
-    Set dctUnused = KeySort(dctPublicItems)
+        KeySort dctUsed
+        For Each vPublic In dctUsed
+            Set cll = dctUsed(vPublic)
+            lMaxPublic = mBasic.Max(lMaxPublic, Len(vPublic))
+            lMaxUsing = mBasic.Max(lMaxUsing, Len(cll(5)))
+            lMaxLineNo = mBasic.Max(lMaxLineNo, Len(cll(6)))
+        Next vPublic
     
-    For Each vPublic In dctUnused
-        Set cll = dctPublicItems(vPublic)
-        sComp = Split(vPublic, ".")(0)
-        sProc = Split(vPublic, ".")(1)
-        s = "(" & PublicItemCollKindOfCompItem(cll) & ")"
-        WriteToFile Align(s, lMaxCompProcKind, , " ") & vPublic
-    Next vPublic
-    
-    lMaxLenItems = MaxLenItems(dctUsed)
-    WriteToFile vbNullString
-    WriteToFile "*) Public items are not analysed in their own component."
-    s = "   I.e. an unused Public item may still be used within its own Component.":                            WriteToFile s
-    WriteToFile "   In case the Public item should rather be turned into Private!"
-    WriteToFile String(Len(s), "=")
-    WriteToFile vbLf
-    s = "The following " & dctUsed.Count & " Public declared items had been found in at least one code line:":  WriteToFile s
-    WriteToFile String(Len(s), "-")
-    
-    KeySort dctUsed
-    For Each vPublic In dctUsed
-        Set cll = dctUsed(vPublic)
-        lMaxPublic = mBasic.Max(lMaxPublic, Len(vPublic))
-        lMaxUsing = mBasic.Max(lMaxUsing, Len(cll(5)))
-    Next vPublic
-    
-    WriteToFile Align("Public item", lMaxPublic, AlignLeft) & " " & Align("Used in (VBComponent.Procedure) by example", lMaxUsing + 2, AlignLeft) & "In code line"
-    WriteToFile String(lMaxPublic, "-") & " " & String(lMaxUsing + 2, "-") & " " & String(80, "-")
-    
-    For Each vPublic In dctUsed
-        Set cll = dctUsed(vPublic)
-        sComp = Split(vPublic, ".")(0)
-        sProc = Split(vPublic, ".")(1)
-        WriteToFile Align(vPublic, lMaxPublic + 1, AlignLeft, , ".") & Align(cll(5), lMaxUsing + 1, AlignLeft, , ".") & ": " & cll(7)
-    Next vPublic
+        .Title "The following " & dctUsed.Count & " Public declared items had been found in at least one code line:"
+        .MaxItemLengths lMaxPublic, lMaxUsing, lMaxLineNo, 60
+        .Headers "|Public Item |Used in VBComponent.Procedure |Line| Code line "
+        .Headers "|            |(by example)                  | No |           "
+        .AlignmentItems "|L.|L.:|R| L|"
+        .ColsDelimiter = " "
+        
+        For Each vPublic In dctUsed
+            Set cll = dctUsed(vPublic)
+            sComp = Split(vPublic, ".")(0)
+            sProc = Split(vPublic, ".")(1)
+            .Entry vPublic, cll(5), cll(6), cll(7)
+        Next vPublic
+        .Dsply
+    End With
 
-    mBasic.ShellRun sFile
+xt: Exit Sub
 
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
 End Sub
 
 Private Function KeySort(ByRef s_dct As Dictionary) As Dictionary
@@ -289,7 +303,9 @@ Private Sub ProvisionOfExcludedCodelines(Optional ByVal p_excluded As String = v
 End Sub
 
 Private Sub ProvisionOfExcludedComponents(Optional ByVal p_excluded As String = "n o n e  s p e c i f i e d")
+    Const PROC = "ProvisionOfExcludedComponents"
     
+    On Error GoTo eh
     If p_excluded = "n o n e  s p e c i f i e d" Then
         fExcludeInclude.Show ' assembles in Excluded the ignored VBComponents
         If Terminated Then GoTo xt
@@ -300,6 +316,10 @@ Private Sub ProvisionOfExcludedComponents(Optional ByVal p_excluded As String = 
 
 xt: Exit Sub
 
+eh: Select Case mBasic.ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
 End Sub
 
 Private Sub ProvisionOfTheServicedWorkbook(ByVal p_wbk As Workbook)
@@ -385,8 +405,8 @@ Private Function WbkSelect() As String
     End If
 End Function
 
-Private Sub WriteToFile(ByVal s As String)
-    If sFile = vbNullString Then sFile = FileTemp(tmp_extension:="txt")
-    FileText(sFile) = s
-End Sub
+'Private Sub WriteToFile(ByVal s As String)
+'    If sFile = vbNullString Then sFile = FileTemp(tmp_extension:="txt")
+'    FileText(sFile) = s
+'End Sub
 

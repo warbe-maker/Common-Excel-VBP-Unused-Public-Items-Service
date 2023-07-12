@@ -1,9 +1,11 @@
 Attribute VB_Name = "mUnused"
 Option Explicit
 ' ----------------------------------------------------------------------------
-' Standard Module mUnused
-' =======================
+' Standard Module mUnused:
+' ========================
+'
 ' Public services:
+' ----------------
 ' - Unused  - Displays a Workbook(file) selection dialog when no serviced
 '             Workbook argument is provided(u_wbk) is provided
 '           - Displays a VBComponent selection dialog when no excluded

@@ -1,17 +1,15 @@
 Attribute VB_Name = "mCompManClient"
 Option Explicit
-' ----------------------------------------------------------------------
-' Standard Module mCompManClient
-' ==============================
-' CompMan client interface. To be imported into any Workbook for being
-' serviced by CompMan's: - "Export Changed Components"
-'                        - "Update Outdated Common Components"
-'                        - "Synchronize VB-Projects"
+' ----------------------------------------------------------------------------
+' Standard Module mCompManClient: CompMan client interface. To be imported
+' =============================== into any Workbook for being serviced by
+' CompMan's "Export Changed Components", "Update Outdated Common Components",
+' or "Synchronize VB-Projects" service.
 '
-' W. Rauschenberger, Berlin Apr 2023
+' W. Rauschenberger, Berlin Jun 2023
 '
-' See https://github.com/warbe-maker/Excel-VB-Components-Management-Services
-' ----------------------------------------------------------------------
+' See https://github.com/warbe-maker/VB-Components-Management
+' ----------------------------------------------------------------------------
 ' --- The below constants must not be changed to Private since they are used byCompMan
 Public Const COMPMAN_DEVLP              As String = "CompMan.xlsb"
 Public Const SRVC_EXPORT_ALL            As String = "ExportAll"
@@ -36,11 +34,11 @@ Private Property Let DisplayedServiceStatus(ByVal s As String)
 End Property
 
 Private Property Get IsDevInstance() As Boolean
-    IsDevInstance = ThisWorkbook.name = mCompManClient.COMPMAN_DEVLP
+    IsDevInstance = ThisWorkbook.Name = mCompManClient.COMPMAN_DEVLP
 End Property
 
 Private Property Get IsAddinInstance() As Boolean
-    IsAddinInstance = ThisWorkbook.name = COMPMAN_ADDIN
+    IsAddinInstance = ThisWorkbook.Name = COMPMAN_ADDIN
 End Property
 
 Private Function AppErr(ByVal app_err_no As Long) As Long
@@ -156,27 +154,18 @@ Private Function ErrMsg(ByVal err_source As String, _
 ' W. Rauschenberger Berlin, Nov 2021
 ' ------------------------------------------------------------------------------
 #If ErHComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When the Common VBA Error Handling Component (mErH) is installed in the
-    '~~ VB-Project (which includes the mMsg component) the mErh.ErrMsg service
-    '~~ is preferred since it provides some enhanced features like a path to the
-    '~~ error.
-    '~~ ------------------------------------------------------------------------
+    '~~ When Common VBA Error Services (mErH) is availabel in the VB-Project
+    '~~ (which includes the mMsg component) the mErh.ErrMsg service is invoked.
     ErrMsg = mErH.ErrMsg(err_source, err_no, err_dscrptn, err_line)
     GoTo xt
 #ElseIf MsgComp = 1 Then
-    '~~ ------------------------------------------------------------------------
-    '~~ When only the Common Message Services Component (mMsg) is installed but
-    '~~ not the mErH component the mMsg.ErrMsg service is preferred since it
-    '~~ provides an enhanced layout and other features.
-    '~~ ------------------------------------------------------------------------
+    '~~ When (only) the Common Message Service (mMsg, fMsg) is available in the
+    '~~ VB-Project, mMsg.ErrMsg is invoked for the display of the error message.
     ErrMsg = mMsg.ErrMsg(err_source, err_no, err_dscrptn, err_line)
     GoTo xt
 #End If
-    '~~ -------------------------------------------------------------------
     '~~ When neither the mMsg nor the mErH component is installed the error
     '~~ message is displayed by means of the VBA.MsgBox
-    '~~ -------------------------------------------------------------------
     Dim ErrBttns    As Variant
     Dim ErrAtLine   As String
     Dim ErrDesc     As String

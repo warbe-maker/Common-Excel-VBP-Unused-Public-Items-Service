@@ -1,70 +1,110 @@
 Attribute VB_Name = "mBasic"
 Option Explicit
 ' ----------------------------------------------------------------------------
-' Standard Module mBasic
-' Declarations, procedures, methods and function likely to be required in any
-' VB-Project, optionally just being copied
+' Standard Module mBasic: Declarations, procedures, methods and function
+' ======================= likely to be required in any VB-Project, optionally
+'                         just being copied.
+' Note: All services run completely autonomous, i.e. do not require any other
+'       installed module. However, when the Common VBA Message Services
+'       (fMsg/mMsg) and or the Common VBA Error Services (mErH) are installed
+'       an error message is passed on to their corresponding procedure which
+'       provides a much better service.
 '
-' Note: The mBasic component may be installed 'all allone'. However, when the
-'       Common VBA Message Services Component (mMsg) and or the Common VBA
-'       Error Handling Component (mErH) is installed an error message is
-'       passed on to their corresponding procedure which provides a much
-'       better service.
+' Public Procedures, Functions, Services:
+' ---------------------------------------
+' AppErr            Converts a positive error number into a negative to
+'                   ensures an error number not conflicting with a VB
+'                   run time error or any other system error number.
+'                   Returns the origin positive error number when called
+'                   with the negative Application Error number. 3)
+' AppIsInstalled    Returns TRUE when a named exec is found in the system path.
+' ArrayCompare      Returns a Dictionary with the provided number of items
+'                   (defaults to all) which differ between two one dimensional
+'                   arrays. When no difference is encountered the returned
+'                   Dictionary is empty (Count = 0).
+' ArrayIsAllocated  Returns TRUE when the provided array has at least one item
+' ArrayNoOfDims     Returns the number of dimensions of an array.
+' ArrayRemoveItem   Removes an array's item by its index or element number.
+' ArrayToRange      Transferres the content of a one- or two-dimensional array
+'                   to a range
+' ArrayTrim         Removes any leading or trailing empty items.
+' Center            Returns a string centered within a string with a certain
+'                   length.
+' CleanTrim         Clears a string from any unprinable characters.
+' BoP/EoP           1), 2)
+' BoC/EoC           1), 2)
+' ErrMsg            Displays a common error message
+'                   a) by means of the VB MsgBox
+'                   b) by fMsg/mMsg and mErH when installed and activated by
+'                      the corresp. Comd. Comp.Args., 1), 2)
+' README            Displays the Common Component's README in the public
+'                   GitHub repo.
+' KeySort           Returns a given Dictionary sorted by key.
+' ShellRun          Opens a folder, an email-app, a url, an Access instance,
+'                   etc.
+' TimedDoEvents     Performs a DoEvent by taking the elapsed time printed in
+'                   VBE's immediate window
+' TimerBegin        Starts a timer (counting system ticks)
+' TimerEnd          Returns the elapsed system ticks converted to milliseconds
 '
-' Procedures, Functions, Services:
-' - AppErr 3)           Converts a positive error number into a negative to
-'                       ensures an error number not conflicting with a VB
-'                       runt time error or any other system error number.
-'                       Returns the origin positive error number when called
-'                       with the negative Application Error number. 3)
-' - AppIsInstalled      Returns TRUE when a named exec is found in the system
-'                       path.
-' - ArrayCompare        Compares two one-dimensional arrays. Returns an array
-'                       with all different items.
-' - ArrayIsAllocated    Returns TRUE when the provided array has at least one
-'                       item.
-' - ArrayNoOfDims       Returns the number of dimensions of an array.
-' - ArrayRemoveItem     Removes an array's item by its index or element number
-' - ArrayToRange        Transferres the content of a one- or two-dimensional
-'                       array to a range
-' - ArrayTrim           Removes any leading or trailing empty items.
-' - BoP/EoP 1), 2)
-' - BoC/EoC 1), 2)
-' - CleanTrim           Clears a string from any unprinable characters.
-' - ErrMsg              Displays a common error message by means of the
-'                       VB MsgBox. 1), 2)
-'                       component where the code has BoP/EoP statements.
-' - ErrSrc 3)           Unambigous identification of a procedure. Used with
-'                       error message for example
-' - ShellRun            Opens folder, email-app, url, an Access instance, ...
-' - TimedDoEvents       Performs a DoEvent by taking the elapsed time printed
-'                       in VBE's immediate window
-' - TimerBegin          Starts a timer (counting system ticks)
-' - TimerEnd            Returns the elapsed system ticks converted to milliseconds
+' Private procedures (for being copied into any module:
+' -----------------------------------------------------
+' ErrSrc            Unambigous identification of a procedure - used with
+'                   BoP, EoP, and ErrMsg
 '
-' Requires:             Reference to:
-'                       "Microsoft Scripting Runtime"
-'                       "Microsoft Visual Basic Application Extensibility .."
-' Optional:             fMsg, mMsg, mErH
+' Requires Reference to:
+' ----------------------
+' Microsoft Scripting Runtime
+' Microsoft Visual Basic Application Extensibility ..
 '
-' 1) Serves for a comprehensive display of an error message when the Common
-'    VBA Error Services Component mErH is installed and the Conditional
-'    Compile Argument 'ErHComp = 1' and serves for the execution trace (when
-'    the Common VBA Execution Trace Service Component mTrc is installed and
-'    the Conditional Compile Argument 'ExecTrace = 1'.
-' 2) When this mBasic module is not used in a VB-Project the procedures may
-'    be copied as Private Sub into any component. The procedure(s) ensure
-'    that the Common VBA Error Services 4) and/or the Common VBA Execution
-'    Trace Service 5) are optional components.
+' 1) Provides a comprehensive and well designed display of an error message,
+'    provided Common VBA Error Services (mErH) and the Common VBA Message
+'    Service (fMsg/mMsg) is installed and the Conditional Compile Arguments
+'    `ErHComp = 1` and `MsgComp = 1`, and serves the execution trace (when
+'    the Common VBA Execution Trace Service (mTrc) is installed and the
+'    Conditional Compile Argument `XcTrc_mTrc = 1` (when mTrc is installed),
+'    or `XcTrc_clsTrc = 1 `.
+' 2) The procedure(s) ensure that the Common VBA Error Services 4) and/or the
+'    Common VBA Execution Trace Service 5) are optional components which may
+'    or may not be installed. The procedures are Private by intention and may
+'    be copied into any component to use the mErH and the mTrc/clsTrc module.
 ' 3) To be copied as Private procedure into any component which raises
 '    Application Errors by means of Err.Raise.
-' 4) https://github.com/warbe-maker/Common-VBA-Error-Services
-' 5) https://github.com/warbe-maker/Common-VBA-Execution-Trace-Service
+' 4) https://github.com/warbe-maker/VBA-Error
+' 5) https://github.com/warbe-maker/VBA-Trace
 '
 ' W. Rauschenberger, Berlin Feb. 2022
-'
-' See https://github.com/warbe-maker/VBA-Basic-Procedures
+' See https://github.com/warbe-maker/VBA-Basics (displayed with README proc)
 ' ----------------------------------------------------------------------------
+Public Const DCONCAT    As String = "||"    ' For concatenating and error with a general message (info) to the error description
+Public Const DGT        As String = ">"
+Public Const DLT        As String = "<"
+Public Const DAPOST     As String = "'"
+Public Const DKOMMA     As String = ","
+Public Const DBSLASH    As String = "\"
+Public Const DDOT       As String = "."
+Public Const DCOLON     As String = ":"
+Public Const DEQUAL     As String = "="
+Public Const DSPACE     As String = " "
+Public Const DEXCL      As String = "!"
+Public Const DQUOTE     As String = """"    ' one " character
+
+Private Const GITHUB_REPO_URL = "https://github.com/warbe-maker/VBA-Basics"
+' Common xl constants grouped ----------------------------
+Public Enum YesNo   ' ------------------------------------
+    xlYes = 1       ' System constants (identical values)
+    xlNo = 2        ' grouped for being used as Enum Type.
+End Enum            ' ------------------------------------
+Public Enum xlOnOff ' ------------------------------------
+    xlOn = 1        ' System constants (identical values)
+    xlOff = -4146   ' grouped for being used as Enum Type.
+End Enum            ' ------------------------------------
+Public Enum StringAlign
+    AlignLeft = 1
+    AlignRight = 2
+    AlignCentered = 3
+End Enum
+
 ' Basic declarations potentially uesefull in any VB-Project
 Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 Public Declare PtrSafe Function GetSystemMetrics32 Lib "user32" Alias "GetSystemMetrics" (ByVal nIndex As Long) As Long
@@ -119,57 +159,76 @@ Private Const ERROR_OUT_OF_MEM = 0&
 Private Const ERROR_FILE_NOT_FOUND = 2&
 Private Const ERROR_PATH_NOT_FOUND = 3&
 Private Const ERROR_BAD_FORMAT = 11&
-
-
-
 Private Const WS_THICKFRAME As Long = &H40000
 Private Const GWL_STYLE As Long = -16
-                
-Public Const DCONCAT    As String = "||"    ' For concatenating and error with a general message (info) to the error description
-Public Const DGT        As String = ">"
-Public Const DLT        As String = "<"
-Public Const DAPOST     As String = "'"
-Public Const DKOMMA     As String = ","
-Public Const DBSLASH    As String = "\"
-Public Const DDOT       As String = "."
-Public Const DCOLON     As String = ":"
-Public Const DEQUAL     As String = "="
-Public Const DSPACE     As String = " "
-Public Const DEXCL      As String = "!"
-Public Const DQUOTE     As String = """" ' one " character
-Private vMsgReply       As Variant
 
-' Common xl constants grouped ----------------------------
-Public Enum YesNo   ' ------------------------------------
-    xlYes = 1       ' System constants (identical values)
-    xlNo = 2        ' grouped for being used as Enum Type.
-End Enum            ' ------------------------------------
-Public Enum xlOnOff ' ------------------------------------
-    xlOn = 1        ' System constants (identical values)
-    xlOff = -4146   ' grouped for being used as Enum Type.
-End Enum            ' ------------------------------------
-Public Enum StringAlign
-    AlignLeft = 1
-    AlignRight = 2
-    AlignCentered = 3
-End Enum
-
+Private vMsgReply               As Variant
 Private cyTimerTicksBegin       As Currency
 Private cyTimerTicksEnd         As Currency
 Private TimerSystemFrequency    As Currency
 
-Public Property Get MsgReply() As Variant:          MsgReply = vMsgReply:   End Property
-
-Public Property Let MsgReply(ByVal v As Variant):   vMsgReply = v:          End Property
-
-Private Property Get SysFrequency() As Currency
-    If TimerSystemFrequency = 0 Then getFrequency TimerSystemFrequency
+Public Property Get SysFrequency(Optional ByVal s_f As Currency = 0) As Currency
+    If s_f = 0 Then s_f = TimerSystemFrequency
+    If s_f = 0 Then getFrequency TimerSystemFrequency
     SysFrequency = TimerSystemFrequency
 End Property
 
+Public Function KeySort(ByRef s_dct As Dictionary) As Dictionary
+' ------------------------------------------------------------------------------
+' Returns the items in a Dictionary (s_dct) sorted by key.
+' ------------------------------------------------------------------------------
+    Const PROC  As String = "KeySort"
+    
+    On Error GoTo eh
+    Dim dct     As New Dictionary
+    Dim vKey    As Variant
+    Dim arr()   As Variant
+    Dim Temp    As Variant
+    Dim Txt     As String
+    Dim i       As Long
+    Dim j       As Long
+    
+    If s_dct Is Nothing Then GoTo xt
+    If s_dct.Count = 0 Then GoTo xt
+    
+    With s_dct
+        ReDim arr(0 To .Count - 1)
+        For i = 0 To .Count - 1
+            arr(i) = .Keys(i)
+        Next i
+    End With
+    
+    '~~ Bubble sort
+    For i = LBound(arr) To UBound(arr) - 1
+        For j = i + 1 To UBound(arr)
+            If arr(i) > arr(j) Then
+                Temp = arr(j)
+                arr(j) = arr(i)
+                arr(i) = Temp
+            End If
+        Next j
+    Next i
+        
+    '~~ Transfer based on sorted keys
+    For i = LBound(arr) To UBound(arr)
+        vKey = arr(i)
+        dct.Add key:=vKey, Item:=s_dct.Item(vKey)
+    Next i
+    
+xt: Set s_dct = dct
+    Set KeySort = dct
+    Set dct = Nothing
+    Exit Function
+
+eh: Select Case ErrMsg(ErrSrc(PROC))
+        Case vbResume:  Stop: Resume
+        Case Else:      GoTo xt
+    End Select
+End Function
+
 Private Property Get TimerSecsElapsed() As Currency:        TimerSecsElapsed = TimerTicksElapsed / SysFrequency:        End Property
 
-Private Property Get TimerSysCurrentTicks() As Currency:    getTickCount TimerSysCurrentTicks:  End Property
+Private Property Get TimerSysCurrentTicks() As Currency:    getTickCount TimerSysCurrentTicks:                          End Property
 
 Private Property Get TimerTicksElapsed() As Currency:       TimerTicksElapsed = cyTimerTicksEnd - cyTimerTicksBegin:    End Property
 
@@ -207,22 +266,23 @@ Public Function Align(ByVal a_strng As String, _
 End Function
 
 Public Function AppErr(ByVal app_err_no As Long) As Long
-' ------------------------------------------------------------------------------
+' ----------------------------------------------------------------------------
 ' Ensures that a programmed 'Application' error number not conflicts with the
-' number of a 'VB Runtime Error' or any other system error.
-' - Returns a given positive 'Application Error' number (app_err_no) into a
-'   negative by adding the system constant vbObjectError
-' - Returns the original 'Application Error' number when called with a negative
-'   error number.
-' ------------------------------------------------------------------------------
+' number of a 'VB Runtime Error' or any other system error. Returns a given
+' positive 'Application Error' number (app_err_no) as a negative by adding the
+' system constant vbObjectError. Returns the original 'Application Error'
+' number when called with a negative error number.
+' Obligatory copy Private for any VB-Component using the service but not
+' having the mBasic common component installed.
+' ----------------------------------------------------------------------------
     If app_err_no >= 0 Then AppErr = app_err_no + vbObjectError Else AppErr = Abs(app_err_no - vbObjectError)
 End Function
 
 Public Function AppIsInstalled(ByVal exe As String) As Boolean
-' ------------------------------------------------------------------------------
+' ----------------------------------------------------------------------------
 ' Returns TRUE when an application (exe) is installed, i.e. the provided name
 ' is found in the VBA.Environ$ Path.
-' ------------------------------------------------------------------------------
+' ----------------------------------------------------------------------------
     Dim i As Long: i = 1
     Do Until VBA.Environ$(i) Like "Path=*": i = i + 1: Loop
     AppIsInstalled = Environ$(i) Like "*" & exe & "*"
@@ -572,7 +632,7 @@ Public Function BaseName(ByVal v As Variant) As String
             Case "Workbook":    BaseName = .GetBaseName(v.FullName)
             Case "File"
                 Set fle = v
-                BaseName = .GetBaseName(fle.name)
+                BaseName = .GetBaseName(fle.Name)
             Case Else:          Err.Raise AppErr(1), ErrSrc(PROC), "The parameter (v) is neither a string nor a File or Workbook object (TypeName = '" & TypeName(v) & "')!"
         End Select
     End With
@@ -585,40 +645,43 @@ eh: Select Case ErrMsg(ErrSrc(PROC))
     End Select
 End Function
 
-Public Sub BoC(ByVal boc_id As String, ParamArray b_arguments() As Variant)
+Public Sub BoC(ByVal b_id As String, _
+      Optional ByVal b_args As String = vbNullString)
 ' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(C)ode with id (boc_id) trace. Procedure to be copied as Private
-' into any module potentially using the Common VBA Execution Trace Service. Has
-' no effect when Conditional Compile Argument is 0 or not set at all.
-' Note: The begin id (boc_id) has to be identical with the paired EoC statement.
+' Common 'Bnd-of-Code' interface for the Common VBA Execution Trace Service.
+' Obligatory copy Private for any VB-Component using the service but not having
+' the mBasic common component installed.
 ' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ExecTrace = 1 Then
-    mTrc.BoC boc_id, s
+#If XcTrc_mTrc = 1 Then         ' when mTrc is installed and active
+    mTrc.BoC b_id, b_args
+#ElseIf XcTrc_clsTrc = 1 Then   ' when clsTrc is installed and active
+    Trc.BoC b_id, b_args
 #End If
 End Sub
 
-Public Sub BoP(ByVal b_proc As String, ParamArray b_arguments() As Variant)
+Public Sub BoP(ByVal b_proc As String, _
+      Optional ByVal b_args As String = vbNullString)
 ' ------------------------------------------------------------------------------
-' (B)egin-(o)f-(P)rocedure named (b_proc). Procedure to be copied as Private
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional Compile
-' Arguments are 0 or not set at all.
+' Common 'Begin of Procedure' interface serving the 'Common VBA Error Services'
+' and - if not installed/activated the 'Common VBA Execution Trace Service'.
+' Obligatory copy Private for any VB-Component using the service but not having
+' the mBasic common component installed.
 ' ------------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ErHComp = 1 Then
-    mErH.BoP b_proc, s
-#ElseIf ExecTrace = 1 Then
-    mTrc.BoP b_proc, s
+#If ErHComp = 1 Then          ' serves the mTrc/clsTrc when installed and active
+    mErH.BoP b_proc, b_args
+#ElseIf XcTrc_clsTrc = 1 Then ' when only clsTrc is installed and active
+    Trc.BoP b_proc, b_args
+#ElseIf XcTrc_mTrc = 1 Then   ' when only mTrc is installed and activate
+    mTrc.BoP b_proc, b_args
 #End If
 End Sub
 
 Public Function Center(ByVal s1 As String, _
                        ByVal l As Long, _
                Optional ByVal sFill As String = " ") As String
-' ------------------------------------------------------------
-' Returns s1 centered in a string with length l.
-' ------------------------------------------------------------
+' ----------------------------------------------------------------------------
+' Returns a string (s) centered within a string with a certain length (l).
+' ----------------------------------------------------------------------------
     Dim lSpace As Long
     lSpace = Max(1, ((l - Len(s1)) / 2))
     Center = VBA.String$(lSpace, sFill) & s1 & VBA.String$(lSpace, sFill)
@@ -665,31 +728,34 @@ Public Function ElementOfIndex(ByVal a As Variant, _
     
 End Function
 
-Public Sub EoC(ByVal eoc_id As String, ParamArray b_arguments() As Variant)
-' ----------------------------------------------------------------------------
-' (E)nd-(o)f-(C)ode id (eoc_id) trace. Procedure to be copied as Private into
-' any module potentially using the Common VBA Execution Trace Service. Has no
-' effect when the Conditional Compile Argument is 0 or not set at all.
-' Note: The end id (eoc_id) has to be identical with the paired BoC statement.
-' ----------------------------------------------------------------------------
-    Dim s As String: If UBound(b_arguments) >= 0 Then s = Join(b_arguments, ",")
-#If ExecTrace = 1 Then
-    mTrc.EoC eoc_id, s
+Public Sub EoC(ByVal e_id As String, _
+      Optional ByVal e_args As String = vbNullString)
+' ------------------------------------------------------------------------------
+' Common 'End-of-Code' interface for the Common VBA Execution Trace Service.
+' Obligatory copy Private for any VB-Component using the service but not having
+' the mBasic common component installed.
+' ------------------------------------------------------------------------------
+#If XcTrc_mTrc = 1 Then         ' when mTrc is installed and active
+    mTrc.EoC e_id, e_args
+#ElseIf XcTrc_clsTrc = 1 Then   ' when clsTrc is installed and active
+    Trc.EoC e_id, e_args
 #End If
 End Sub
 
 Public Sub EoP(ByVal e_proc As String, _
-      Optional ByVal e_inf As String = vbNullString)
-' ----------------------------------------------------------------------------
-' (E)nd-(o)f-(P)rocedure named (e_proc). Procedure to be copied as Private Sub
-' into any module potentially either using the Common VBA Error Service and/or
-' the Common VBA Execution Trace Service. Has no effect when Conditional
-' Compile Arguments are 0 or not set at all.
-' ----------------------------------------------------------------------------
-#If ErHComp = 1 Then
-    mErH.EoP e_proc
-#ElseIf ExecTrace = 1 Then
-    mTrc.EoP e_proc, e_inf
+      Optional ByVal e_args As String = vbNullString)
+' ------------------------------------------------------------------------------
+' Common 'Begin of Procedure' interface serving the 'Common VBA Error Services'
+' and - if not installed/activated the 'Common VBA Execution Trace Service'.
+' Obligatory copy Private for any VB-Component using the service but not having
+' the mBasic common component installed.
+' ------------------------------------------------------------------------------
+#If ErHComp = 1 Then          ' serves the mTrc/clsTrc when installed and active
+    mErH.EoP e_proc, e_args
+#ElseIf XcTrc_clsTrc = 1 Then ' when only clsTrc is installed and active
+    Trc.EoP e_proc, e_args
+#ElseIf XcTrc_mTrc = 1 Then   ' when only mTrc is installed and activate
+    mTrc.EoP e_proc, e_args
 #End If
 End Sub
 
@@ -698,24 +764,23 @@ Public Function ErrMsg(ByVal err_source As String, _
               Optional ByVal err_dscrptn As String = vbNullString, _
               Optional ByVal err_line As Long = 0) As Variant
 ' ------------------------------------------------------------------------------
-' Universal error message display service which displays a debugging option
-' button when the Conditional Compile Argument 'Debugging = 1', displays an
-' optional additional "About:" section when the err_dscrptn has an additional
-' string concatenated by two vertical bars (||), and displays the error message
-' by means of VBA.MsgBox when neither the Common Component mErH (indicated by
-' the Conditional Compile Argument "ErHComp = 1", nor the Common Component mMsg
-' (idicated by the Conditional Compile Argument "MsgComp = 1") is installed.
+' Universal error message display service. Obligatory copy Private for any
+' VB-Component using the common error service but not having the mBasic common
+' component installed.
+' Displays: - a debugging option button when the Cond. Comp. Arg. 'Debugging = 1'
+'           - an optional additional "About:" section when the err_dscrptn has
+'             an additional string concatenated by two vertical bars (||)
+'           - the error message by means of the Common VBA Message Service
+'             (fMsg/mMsg) when installed and active (Cond. Comp. Arg.
+'             `MsgComp = 1`)
 '
 ' Uses: AppErr  For programmed application errors (Err.Raise AppErr(n), ....)
 '               to turn them into a negative and in the error message back into
 '               its origin positive number.
-'       ErrSrc  To provide an unambiguous procedure name by prefixing is with
-'               the module name.
 '
-' W. Rauschenberger Berlin, Apr 2023
-'
-' See: https://github.com/warbe-maker/Common-VBA-Error-Services
-' ------------------------------------------------------------------------------' ------------------------------------------------------------------------------
+' W. Rauschenberger Berlin, June 2023
+' See: https://github.com/warbe-maker/VBA-Error
+' ------------------------------------------------------------------------------
 #If ErHComp = 1 Then
     '~~ When Common VBA Error Services (mErH) is availabel in the VB-Project
     '~~ (which includes the mMsg component) the mErh.ErrMsg service is invoked.
@@ -746,37 +811,33 @@ Public Function ErrMsg(ByVal err_source As String, _
     If err_source = vbNullString Then err_source = Err.source
     If err_dscrptn = vbNullString Then err_dscrptn = Err.Description
     If err_dscrptn = vbNullString Then err_dscrptn = "--- No error description available ---"
-    
-    '~~ Consider extra information is provided with the error description
+    '~~ About
+    ErrDesc = err_dscrptn
     If InStr(err_dscrptn, "||") <> 0 Then
         ErrDesc = Split(err_dscrptn, "||")(0)
         ErrAbout = Split(err_dscrptn, "||")(1)
+    End If
+    '~~ Type of error
+    If err_no < 0 Then
+        ErrType = "Application Error ": ErrNo = AppErr(err_no)
     Else
-        ErrDesc = err_dscrptn
+        ErrType = "VB Runtime Error ":  ErrNo = err_no
+        If err_dscrptn Like "*DAO*" _
+        Or err_dscrptn Like "*ODBC*" _
+        Or err_dscrptn Like "*Oracle*" _
+        Then ErrType = "Database Error "
     End If
     
-    '~~ Determine the type of error
-    Select Case err_no
-        Case Is < 0
-            ErrNo = AppErr(err_no)
-            ErrType = "Application Error "
-        Case Else
-            ErrNo = err_no
-            If err_dscrptn Like "*DAO*" _
-            Or err_dscrptn Like "*ODBC*" _
-            Or err_dscrptn Like "*Oracle*" _
-            Then ErrType = "Database Error " _
-            Else ErrType = "VB Runtime Error "
-    End Select
-    
-    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"   ' assemble ErrSrc from available information"
-    If err_line <> 0 Then ErrAtLine = " at line " & err_line                    ' assemble ErrAtLine from available information
-    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")         ' assemble ErrTitle from available information
-       
-    ErrText = "Error: " & vbLf & ErrDesc & vbLf & vbLf & "Source: " & vbLf & err_source & ErrAtLine
+    '~~ Title
+    If err_source <> vbNullString Then ErrSrc = " in: """ & err_source & """"
+    If err_line <> 0 Then ErrAtLine = " at line " & err_line
+    ErrTitle = Replace(ErrType & ErrNo & ErrSrc & ErrAtLine, "  ", " ")
+    '~~ Description
+    ErrText = "Error: " & vbLf & ErrDesc
+    '~~ About
     If ErrAbout <> vbNullString Then ErrText = ErrText & vbLf & vbLf & "About: " & vbLf & ErrAbout
     
-#If Debugging Then
+#If Debugging = 1 Then
     ErrBttns = vbYesNo
     ErrText = ErrText & vbLf & vbLf & "Debugging:" & vbLf & "Yes    = Resume Error Line" & vbLf & "No     = Terminate"
 #Else
@@ -901,8 +962,26 @@ Public Function ProgramIsInstalled(ByVal sProgram As String) As Boolean
         ProgramIsInstalled = InStr(Environ$(18), sProgram) <> 0
 End Function
 
-Public Function SelectFolder( _
-                Optional ByVal sTitle As String = "Select a Folder") As String
+Public Sub README(Optional ByVal r_url As String = vbNullString, _
+                  Optional ByVal r_bookmark As String = vbNullString)
+' ----------------------------------------------------------------------------
+' Displays the given url (r_url) with the given bookmark (r_bookmark) in the
+' computer's default browser. When no url is provided it defaults to this
+' component's README url in the public GitHub repo.
+' ----------------------------------------------------------------------------
+    If r_url = vbNullString _
+    Then r_url = "https://github.com/warbe-maker/VBA-Basics"
+    
+    If r_bookmark = vbNullString Then
+        mBasic.ShellRun r_url
+    Else
+        r_bookmark = Replace("#" & r_bookmark, "##", "#") ' add # if missing
+        mBasic.ShellRun r_url & r_bookmark
+    End If
+        
+End Sub
+
+Public Function SelectFolder(Optional ByVal sTitle As String = "Select a Folder") As String
 ' ----------------------------------------------------------------------------
 ' Returns the selected folder or a vbNullString if none had been selected.
 ' ----------------------------------------------------------------------------
@@ -1130,40 +1209,51 @@ eh: Select Case ErrMsg(ErrSrc(PROC))
     End Select
 End Function
 
-Public Function TimedDoEvents(ByVal tde_source As String) As String
+Public Function TimedDoEvents(Optional t_source As String = vbNullString, _
+                              Optional t_debug_print As Boolean = False) As String
 ' ---------------------------------------------------------------------------
-' For the execution of a DoEvents statement. Provides the information in
-' which procedure it had been executed and the msecs delay it has caused.
+' Returns the elapsed time in seconds of DoEvents statement.
 '
-' Note: DoEvents every now and then is able to solve timing problems. When
-'       looking at the description of its effect this often appears
-'       miraculous. However, when it helps ... . But DoEvents allow keyboard
-'       interaction while a process executes. In case of a loop - and when
-'       the DoEvents lies within it, this may be a godsend. But it as well
-'       may cause unpredictable results. This little procedure at least
-'       documents in the Immediate window when (with milliseconds) and where
-'       it had been executed.
+' Background: DoEvents every now and then are concidered to solve problems.
+'             However, when looking at the description of DoEvents its effect
+'             may appears miraculous. However, stil when it helps is should
+'             be known that DoEvents allow keyboard interaction while a
+'             process executes. In case of a loop with embedded DoEvents,
+'             this may be a godsend. But it as well may cause unpredictable
+'             results. This little procedure at least documents in VBE's
+'             immediate window the resulting performace delay in milliseconds.
 ' ---------------------------------------------------------------------------
-    Dim s As String
+    Const TIMER_FORMAT = "0.00000"
+    Dim cBegin      As Currency
+    Dim cEnd        As Currency
+    Dim cElapsed    As Currency
     
-    mBasic.TimerBegin
+    mBasic.TimerBegin cBegin
     DoEvents
-    s = Format(Now(), "hh:mm:ss") & ":" _
-      & Right(Format(Timer, "0.000"), 3) _
-      & " DoEvents paused the execution for " _
-      & Format(mBasic.TimerEnd, "00000") _
-      & " msecs in '" & tde_source & "'"
-'    Debug.Print s
-    TimedDoEvents = s
+    mBasic.TimerEnd cBegin, cEnd, cElapsed, TIMER_FORMAT
+    If t_source <> vbNullString Then t_source = " (" & Trim(t_source) & ")"
+    TimedDoEvents = Format((cElapsed / SysFrequency) * 1000, TIMER_FORMAT) & " seconds " & t_source
+    If t_debug_print Then Debug.Print TimedDoEvents
     
 End Function
 
-Public Sub TimerBegin()
-    cyTimerTicksBegin = TimerSysCurrentTicks
+Public Sub TimerBegin(ByRef t_begin As Currency)
+    t_begin = TimerSysCurrentTicks
 End Sub
 
-Public Function TimerEnd() As Currency
-    cyTimerTicksEnd = TimerSysCurrentTicks
-    TimerEnd = TimerSecsElapsed * 1000
+Public Function TimerEnd(ByVal t_begin As Currency, _
+                Optional ByRef t_end As Currency, _
+                Optional ByRef t_elapsed As Currency, _
+                Optional ByVal t_format As String = "hh:mm:ss.0000") As String
+' ---------------------------------------------------------------------------
+' Returns, based on provided begin-ticks (t_begin)
+' - the end-ticks (t_end)
+' - the elapsed ticks (t_elapsed)
+' - the elapsed time in the provided format (t_format)
+' ---------------------------------------------------------------------------
+    t_end = TimerSysCurrentTicks
+    t_elapsed = ((t_end - t_begin) / SysFrequency) * 1000
+    TimerEnd = Format(t_elapsed, t_format)
+    
 End Function
 
